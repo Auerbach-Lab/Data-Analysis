@@ -65,7 +65,8 @@ oddball_reaction_by_frequency =
     summarise(reaction = mean(Rxn, na.rm = TRUE) * 1000,
               .groups = "drop") %>%
     group_by(rat_ID, rat_name, frequency, genotype, line, challenge) %>%
-    do(mutate(., reaction_norm = reaction/filter(., position == min(position))$reaction)) %>%
+    do(mutate(., reaction_norm = reaction/filter(., position == min(position))$reaction,
+                 reaction_norm_diff = reaction - filter(., position == min(position))$reaction)) %>%
     ungroup
 
 oddball_reaction = 
@@ -78,7 +79,8 @@ oddball_reaction =
   summarise(reaction = mean(Rxn, na.rm = TRUE) * 1000,
             .groups = "drop") %>%
   group_by(rat_ID, rat_name, genotype, line, challenge) %>%
-  do(mutate(., reaction_norm = reaction/filter(., position == min(position))$reaction)) %>%
+  do(mutate(., reaction_norm = reaction/filter(., position == min(position))$reaction,
+            reaction_norm_diff = reaction - filter(., position == min(position))$reaction)) %>%
   ungroup
 
 
