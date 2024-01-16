@@ -95,12 +95,17 @@ summary(Tsc2.TH.BBN.aov)
 Tsc2.TH.BBN.aov.data %>%
   {if (drop_TP3) filter(., rat_name != "TP3")} %>%
   filter(detail != "Rotating") %>%
-  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% factor(levels = c("BBN", "4", "8", "16", "32"))) %>%
-  ggplot(aes(x = genotype, y = TH, fill = genotype, color = line, group = interaction(line, genotype))) +
+  mutate(group = if_else(rat_ID < 300, "Group 1", "Group 2")) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% 
+           factor(levels = c("BBN", "4", "8", "16", "32"))) %>%
+  ggplot(aes(x = genotype, y = TH, shape = line,
+             fill = genotype, color = group, group = interaction(group, line, genotype))) +
   geom_boxplot(position = position_dodge(1), linewidth = 1, width = 0.8) +
   # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
-  stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 3) +
-  scale_color_manual(values = c("Tsc2-LE" = "darkblue", "Fmr1-LE" = "red")) +
+  stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
+               position = position_dodge(1), vjust = 2, size = 3) +
+  # scale_color_manual(values = c("Tsc2-LE" = "darkblue", "Fmr1-LE" = "red")) +
+  scale_color_manual(values = c("Group 1" = "darkblue", "Group 2" = "goldenrod")) +
   scale_fill_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "lightcoral")) +
   labs(x = "",
        y = "Threshold (dB, mean +/- SE)",
@@ -170,7 +175,7 @@ Rxn_table %>%
   filter(Duration %in% c(300)) %>%
   # rename(Intensity = `Inten (dB)`) %>%
   filter(detail == "Alone") %>%
-  mutate(group = if_else(rat_ID < 314, "Group 1", "Group 2")) %>%
+  mutate(group = if_else(rat_ID < 300, "Group 1", "Group 2")) %>%
   # filter(rat_ID < 314) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
   filter(! str_detect(Intensity, pattern = "5$")) %>%
