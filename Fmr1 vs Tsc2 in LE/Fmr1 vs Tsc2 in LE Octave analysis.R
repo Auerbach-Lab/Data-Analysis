@@ -570,19 +570,20 @@ Octave_graph_Reversal_learning_dprime =
   # Individual lines
   geom_line(aes(group = interaction(line, genotype, rat_ID)), alpha = 0.3) +
   # mean for genotypes across all frequencies
-  stat_summary(fun = mean,
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                fun.min = function(x) mean(x) - FSA::se(x),
                fun.max = function(x) mean(x) + FSA::se(x),
                geom = "errorbar", width = 0, linewidth = 0.7, position = position_dodge(0.1)) +
-  stat_summary(fun = mean, geom = "line", linewidth = 1.5) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), geom = "line", linewidth = 1.5) +
   # mean for each frequency by genotype
-  stat_summary(aes(shape = line), fun = mean, geom = "point",
+  stat_summary(aes(shape = line), fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "point",
                size = 2, stroke = 2) +
   # Mark the Day 0 is average
   geom_text(aes(x = 1.8, y = 3.5, label = "Average")) +
   # Add criterion line
   geom_hline(aes(yintercept = 2.2), linewidth = 1.5, linetype = "dashed", color = "goldenrod") +
-  xlim(-4, 40) +
+  xlim(-4, 50) +
   scale_shape_manual(values = c("Tsc2" = 21, "Fmr1" = 24)) +
   scale_fill_manual(values = c("Tsc2" = "slategrey", "Fmr1" = "tan4")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "blue", "KO" = "red")) +
