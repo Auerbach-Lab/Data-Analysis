@@ -1,5 +1,7 @@
 
 .gitattributes
+.RData
+.Rhistory
 11-13kHz HHL/.RData
 11-13kHz HHL/.Rhistory
 *.pper
