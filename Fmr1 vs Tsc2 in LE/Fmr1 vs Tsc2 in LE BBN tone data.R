@@ -31,10 +31,33 @@ Calculate_TH <- function(df) {
   # Uncomment to see line fitting by a package which shows line
   # library(drda)
   # drda(dprime ~ dB, data = df) %>% plot
+  rat_name = unique(df$rat_name)
+  Freq = unique(df$Freq)
+  Dur = unique(df$Dur)
+  
+  # model -----------------------------------------------------------------
   fit = loess(dprime ~ dB, data = df)
-  # plot(fit)
   TH = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff, ties = "ordered")$y
-  # print(TH)
+  
+
+  # Graph it --------------------------------------------------------------
+  # # Get TH point (it needs inverting for some reason)
+  # TH_point = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff, ties = "ordered")
+  # TH_x = TH_point$y
+  # TH_y = TH_point$x
+  # 
+  # # Actually plot
+  # plot(fit,
+  #      main = glue("{rat_name} @ {Freq}kHz & {Dur}ms"),
+  #      sub = glue("TH: x = {TH_x}, y = {TH_y}"))
+  # # added fitted line
+  # lines(fit$x, predict(fit), col = "green")
+  # # add TH point to plot
+  # points(TH_x, TH_y, col="red")
+  # # add line to plot
+  # abline(h=1.5, col="blue")
+  
+  # print(glue("{rat_name} @ {Freq}kHz & {Dur}ms: {round(TH, digits = 1)}"))
   return(TH)
 }
 
@@ -48,7 +71,7 @@ TH_table = core_data %>%
   # Sort for ordered
   arrange(rat_ID, rat_name, Freq, Dur, dB) %>%
   #Prep for Calculate_TH function
-  nest(data = c(dB, dprime), .by = c(rat_ID, rat_name, sex, genotype, line, detail, Freq, Dur)) %>% 
+  nest(data = c(rat_name, Freq, Dur, dB, dprime), .by = c(rat_ID, rat_name, sex, genotype, line, detail, Freq, Dur)) %>% 
   mutate(TH = map_dbl(data, Calculate_TH)) %>%
   select(-data) 
 
