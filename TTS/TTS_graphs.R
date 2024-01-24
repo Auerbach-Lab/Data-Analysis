@@ -75,6 +75,35 @@ ggsave(filename = "Trial Count by BG.jpg",
        plot = last_plot(),
        width = 8, height = 6, units = "in", dpi = 300)
 
+# Trial Count by group
+stats_table_detail %>%
+  mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
+  # Add group numbers to look for effects between groups
+  mutate(group = case_when(rat_ID %in% Group_TTS_pilot ~ "Pilot",
+                           rat_ID %in% Group_1 ~ "Group 1",
+                           rat_ID %in% Group_2 ~ "Group 2",
+                           rat_ID %in% Group_3 & detail == "Recheck" ~ "Group 3 Redo",
+                           rat_ID %in% Group_3 ~ "Group 3",
+                           .default = "Unknown") %>% ordered(levels = c("Pilot", "Group 1", "Group 2", "Group 3", "Group 3 Redo"))) %>%
+  filter(HL_state == "baseline" & stim_type == "BBN" & group != "Unknown") %>%
+  ggplot(aes(x = group, y = trial_count, fill = group, group = group)) +
+  geom_boxplot(na.rm = TRUE, position = position_dodge(1), linewidth = 1, width = 0.8) +
+  stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 2) +
+  labs(title = "Trial Count",
+       x = "Groups (through time)",
+       y = "Trial Count") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "none",
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+ggsave(filename = "Trial count by group.jpg",
+       path = save_folder,
+       plot = last_plot(),
+       width = 8, height = 6, units = "in", dpi = 300)
+
 # Hit % Count
 # TODO:redo with new stats
 stats_table %>%
@@ -163,6 +192,36 @@ ggsave(filename = "Hit rate by BG.jpg",
        plot = last_plot(),
        width = 8, height = 6, units = "in", dpi = 300)
 
+
+# Hit % by group
+stats_table_detail %>%
+  mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
+  # Add group numbers to look for effects between groups
+  mutate(group = case_when(rat_ID %in% Group_TTS_pilot ~ "Pilot",
+                           rat_ID %in% Group_1 ~ "Group 1",
+                           rat_ID %in% Group_2 ~ "Group 2",
+                           rat_ID %in% Group_3 & detail == "Recheck" ~ "Group 3 Redo",
+                           rat_ID %in% Group_3 ~ "Group 3",
+                           .default = "Unknown") %>% ordered(levels = c("Pilot", "Group 1", "Group 2", "Group 3", "Group 3 Redo"))) %>%
+  filter(HL_state == "baseline" & stim_type == "BBN" & group != "Unknown") %>%
+  ggplot(aes(x = group, y = (hit_percent * 100), fill = group, group = group)) +
+  geom_boxplot(na.rm = TRUE, position = position_dodge(1), linewidth = 1, width = 0.8) +
+  stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 2) +
+  labs(title = "Hit rate",
+       x = "Hearing Loss Phase (through time)",
+       y = "Hit %") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "none",
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+ggsave(filename = "Hit rate by group.jpg",
+       path = save_folder,
+       plot = last_plot(),
+       width = 8, height = 6, units = "in", dpi = 300)
+
 # FA % Count
 stats_table %>%
   mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
@@ -239,6 +298,35 @@ stats_table_by_BG %>%
   )
 
 ggsave(filename = "FA rate by BG.jpg",
+       path = save_folder,
+       plot = last_plot(),
+       width = 8, height = 6, units = "in", dpi = 300)
+
+# FA % by group
+stats_table_detail %>%
+  mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
+  # Add group numbers to look for effects between groups
+  mutate(group = case_when(rat_ID %in% Group_TTS_pilot ~ "Pilot",
+                           rat_ID %in% Group_1 ~ "Group 1",
+                           rat_ID %in% Group_2 ~ "Group 2",
+                           rat_ID %in% Group_3 & detail == "Recheck" ~ "Group 3 Redo",
+                           rat_ID %in% Group_3 ~ "Group 3",
+                           .default = "Unknown") %>% ordered(levels = c("Pilot", "Group 1", "Group 2", "Group 3", "Group 3 Redo"))) %>%
+  filter(HL_state == "baseline" & stim_type == "BBN" & group != "Unknown") %>%
+  ggplot(aes(x = group, y = (hit_percent * 100), fill = group, group = group)) +
+  geom_boxplot(na.rm = TRUE, position = position_dodge(1), linewidth = 1, width = 0.8) +
+  stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 2) +
+  labs(title = "FA rate",
+       x = "Hearing Loss Phase (through time)",
+       y = "FA %") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "none",
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+ggsave(filename = "FA rate by group.jpg",
        path = save_folder,
        plot = last_plot(),
        width = 8, height = 6, units = "in", dpi = 300)
