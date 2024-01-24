@@ -103,6 +103,16 @@ stats_table_by_BG =
             FA_percent = mean(FA_percent, na.rm = TRUE),
             .groups = "drop")
 
+stats_table_detail =
+  core_data %>%
+  # Use rat_ID because its sure to be unique
+  group_by(rat_ID, rat_name, HL_state, stim_type, detail) %>%
+  # Get Averages
+  summarise(trial_count = mean(trial_count, na.rm = TRUE),
+            hit_percent = mean(hit_percent, na.rm = TRUE),
+            FA_percent = mean(FA_percent, na.rm = TRUE),
+            .groups = "drop")
+
 
 # dprime ------------------------------------------------------------------
 # needed for TH and dprime table so stop at in-between
