@@ -28,19 +28,17 @@ core_data = dataset %>%
 # LOESS: Local Regression is a non-parametric approach that fits multiple regressions
 # see http://r-statistics.co/Loess-Regression-With-R.html
 Calculate_TH <- function(df) {
-  # Uncomment to see line fitting by a package which shows line
-  # library(drda)
-  # drda(dprime ~ dB, data = df) %>% plot
   rat_name = unique(df$rat_name)
   Freq = unique(df$Freq)
   Dur = unique(df$Dur)
-  
+  step_size = if(is.null(df$step_size)) "All data" else glue("{unique(df$step_size)}dB step size")
+
   # model -----------------------------------------------------------------
   fit = loess(dprime ~ dB, data = df)
   TH = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff, ties = "ordered")$y
-  
 
-  # Graph it --------------------------------------------------------------
+
+  # # Graph it --------------------------------------------------------------
   # # Get TH point (it needs inverting for some reason)
   # TH_point = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff, ties = "ordered")
   # TH_x = TH_point$y
@@ -48,16 +46,34 @@ Calculate_TH <- function(df) {
   # 
   # # Actually plot
   # plot(fit,
-  #      main = glue("{rat_name} @ {Freq}kHz & {Dur}ms"),
-  #      sub = glue("TH: x = {TH_x}, y = {TH_y}"))
+  #      main = glue("{rat_name} @ {Freq}kHz & {Dur}ms {step_size} TH: {round(TH, digits = 1)}"),
+  #      sub = glue("TH: x = {TH_x}"))
   # # added fitted line
   # lines(fit$x, predict(fit), col = "green")
   # # add TH point to plot
   # points(TH_x, TH_y, col="red")
   # # add line to plot
   # abline(h=1.5, col="blue")
-  
-  # print(glue("{rat_name} @ {Freq}kHz & {Dur}ms: {round(TH, digits = 1)}"))
+  # dev.copy(png,
+  #          glue("C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Rollout Issues/dprime plots/{rat_name} {Freq}kHz {Dur}ms {step_size}.png"))
+  # dev.off()
+  # 
+  # 
+  # # Alt Method ---------------------------------------------------------------
+  # # Dose-dependant curve which suggests 4-parameter logistic function is best fit
+  # library(drda)
+  # fit_drda = drda(dprime ~ dB, data = df)
+  # # pull the 1st number which is the estimate, the other 2 are the 95% CI range
+  # TH_drda = effective_dose(fit_drda, y = TH_cutoff, type = "absolute")[,1]
+  # # plot
+  # plot(fit_drda,
+  #      main = glue("{rat_name} @ {Freq}kHz & {Dur}ms {step_size}, TH: {round(TH_drda, digits = 1)}"))
+  # dev.copy(png,
+  #          glue("C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Rollout Issues/dprime plots/{rat_name} {Freq}kHz {Dur}ms {step_size} ddra.png"))
+  # dev.off()
+
+
+  # print(glue("{rat_name} @ {Freq}kHz & {Dur}ms: {round(TH, digits = 1)} or DRDA {round(TH_drda, digits = 1)}"))
   return(TH)
 }
 
