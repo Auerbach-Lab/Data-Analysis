@@ -92,6 +92,41 @@ TH_table = core_data %>%
   select(-data) 
 
 
+TH_table_step = 
+  dataset %>% 
+  # Get essential columns in usable form; expands the dataframe
+  unnest_wider(assignment) %>% unnest_wider(stats) %>%
+  # Only keep relevant Experiments
+  filter(experiment %in% c("Fmr1-LE", "Tsc2-LE")) %>%
+  # drop Oddball and Octave
+  filter(! phase %in% c("Octave", "Tone-BBN")) %>%
+  left_join(rat_decoder, by = join_by(rat_ID == Rat_ID)) %>%
+  rename(sex = Sex) %>%
+  mutate(gene = str_extract(Genotype, pattern = "(Fmr1|Tsc2)"), 
+         background = str_extract(Genotype, pattern = "(LE|SD)"),
+         line = glue("{gene}-{background}"),
+         genotype = str_extract(Genotype, pattern = "(WT|KO|Het)$")) %>%
+  # Omit Training & Reset days
+  filter(! task %in% c("Training", "Reset")) %>%
+  # Omit days with > 45% FA, i.e. guessing
+  filter(FA_percent < FA_cutoff) %>%
+  # get step size
+  rowwise() %>% 
+  mutate(temp = length(pluck(summary, "dB_step_size")),
+         step_size = if(temp == 1) pluck(summary, "dB_step_size") else NA) %>%
+  # filter(! is.na(step_size)) %>%
+  filter(step_size == 5) %>%
+  # Get dprimes
+  unnest(dprime) %>%
+  # Sort for ordered
+  arrange(rat_ID, rat_name, Freq, Dur, dB) %>%
+  #Prep for Calculate_TH function
+  nest(data = c(rat_name, Freq, Dur, dB, dprime, step_size), 
+       .by = c(rat_ID, rat_name, sex, genotype, line, detail, Freq, Dur, step_size)) %>% 
+  mutate(TH = map_dbl(data, Calculate_TH)) %>%
+  select(-data) 
+
+
 # Get Reaction times by rat -----------------------------------------------
 
 Rxn_table = core_data %>%
