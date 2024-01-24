@@ -234,7 +234,8 @@ Rxn_table %>%
   filter(! str_detect(Intensity, pattern = "5$")) %>%
   filter(Intensity < 90 & Intensity > 10) %>%
   filter(Frequency == "BBN") %>%
-  group_by(rat_ID) %>%
+  mutate(name = rat_name) %>%
+  group_by(rat_ID, name) %>%
   do(bbn_single_rat_graph = 
     ggplot(data = .,
            aes(x = Intensity, y = Rxn, linetype = as.factor(Duration),
