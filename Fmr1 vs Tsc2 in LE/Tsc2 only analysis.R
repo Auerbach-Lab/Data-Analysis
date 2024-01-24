@@ -217,3 +217,46 @@ Rxn_table %>%
 # plot = last_plot(),
 # width = 5, height = 6, units = "in", dpi = 300)
 
+
+# Individual Graphs -------------------------------------------------------
+
+BBN_Individual_Graphs = 
+Rxn_table %>%
+  {if (drop_TP3) filter(., rat_name != "TP3")} %>%
+  filter(line == "Tsc2-LE") %>%
+  # filter(Duration %in% c(300, 100)) %>%
+  filter(detail == "Alone") %>%
+  mutate(group = if_else(rat_ID < 300, "Group 1", "Group 2")) %>%
+  # filter(rat_ID < 314) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
+  filter(! str_detect(Intensity, pattern = "5$")) %>%
+  filter(Intensity < 90 & Intensity > 10) %>%
+  filter(Frequency == "BBN") %>%
+  group_by(rat_ID) %>%
+  do(bbn_single_rat_graph = 
+    ggplot(data = .,
+           aes(x = Intensity, y = Rxn, linetype = as.factor(Duration),
+               color = genotype, group = interaction(Duration, group, genotype))) +
+    stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+                 fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+                 fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+                 geom = "errorbar", width = 1.5, position = position_dodge(1)) +
+    stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+                 geom = "point", position = position_dodge(1), size = 3) +
+    stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+                 geom = "line", position = position_dodge(1)) +
+    labs(x = "Intensity (dB)",
+         y = "Reaction time (ms, mean +/- SE)",
+         color = "Genotype", linetype = "",
+         title = glue("{unique(.$rat_name)}")) +
+    scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+    scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+    theme_classic() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+    )
+  ) %>%
+  arrange(desc(rat_ID))
+
+BBN_Individual_Graphs$bbn_single_rat_graph
