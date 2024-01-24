@@ -92,7 +92,9 @@ summary(Tsc2.TH.BBN.aov)
 
 # TH Graph ----------------------------------------------------------------
 
-Tsc2.TH.BBN.aov.data %>%
+TH_table %>%
+  filter(line == "Tsc2-LE") %>%
+  filter(detail != "Rotating" & Frequency == 0) %>%
   {if (drop_TP3) filter(., rat_name != "TP3")} %>%
   filter(detail != "Rotating") %>%
   mutate(group = if_else(rat_ID < 300, "Group 1", "Group 2")) %>%
