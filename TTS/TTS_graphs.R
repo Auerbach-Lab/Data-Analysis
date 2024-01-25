@@ -208,8 +208,9 @@ stats_table_detail %>%
   geom_boxplot(na.rm = TRUE, position = position_dodge(1), linewidth = 1, width = 0.8) +
   stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 2) +
   labs(title = "Hit rate",
-       x = "Hearing Loss Phase (through time)",
+       x = "Groups (through time)",
        y = "Hit %") +
+  ylim(55, 100) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
@@ -313,12 +314,13 @@ stats_table_detail %>%
                            rat_ID %in% Group_3 ~ "Group 3",
                            .default = "Unknown") %>% ordered(levels = c("Pilot", "Group 1", "Group 2", "Group 3", "Group 3 Redo"))) %>%
   filter(HL_state == "baseline" & stim_type == "BBN" & group != "Unknown") %>%
-  ggplot(aes(x = group, y = (hit_percent * 100), fill = group, group = group)) +
+  ggplot(aes(x = group, y = (FA_percent * 100), fill = group, group = group)) +
   geom_boxplot(na.rm = TRUE, position = position_dodge(1), linewidth = 1, width = 0.8) +
   stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 2) +
   labs(title = "FA rate",
-       x = "Hearing Loss Phase (through time)",
+       x = "Groups (through time)",
        y = "FA %") +
+  ylim(0, 40) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
