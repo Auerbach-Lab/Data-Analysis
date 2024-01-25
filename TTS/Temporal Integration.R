@@ -166,7 +166,9 @@ BBN_TempInt_TH %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
   mutate(HL_state = if_else(HL_state == "post-HL", "After Hearing Loss and recovery", "Baseline") %>%
            factor(levels = c("Baseline", "After Hearing Loss and recovery"))) %>%
-  filter(group %in% c("Group 1", "Group 3", "Group 3 Redo") & HL_state == "Baseline") %>%
+  # filter(group %in% c("Group 1", "Group 3", "Group 3 Redo")) %>%
+  filter(group != "NA") %>%
+  filter(HL_state == "Baseline") %>%
   ggplot(aes(x = as.factor(Duration), y = TH,
              color = HL_state, fill = group,
              group = interaction(Duration, group, HL_state))) +
@@ -178,7 +180,7 @@ BBN_TempInt_TH %>%
        y = "Threshold (dB)",
        color = "Hearing loss?"
   ) +
-  # facet_wrap( ~ HL_state, ncol = 5, scales = "free_x") +
+  facet_wrap( ~ group, ncol = 5, scales = "free_x") +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
