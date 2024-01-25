@@ -260,6 +260,6 @@ Rxn_table %>%
       panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
     )
   ) %>%
-  arrange(desc(rat_ID))
+  arrange(rat_ID)
 
 BBN_Individual_Graphs$bbn_single_rat_graph
