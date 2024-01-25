@@ -166,8 +166,7 @@ BBN_TempInt_TH %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
   mutate(HL_state = if_else(HL_state == "post-HL", "After Hearing Loss and recovery", "Baseline") %>%
            factor(levels = c("Baseline", "After Hearing Loss and recovery"))) %>%
-  # filter(group %in% c("Group 1", "Group 3", "Group 3 Redo")) %>%
-  filter(group != "NA") %>%
+  filter(group %in% c("Group 1", "Group 3", "Group 3 Redo")) %>%
   filter(HL_state == "Baseline") %>%
   ggplot(aes(x = as.factor(Duration), y = TH,
              color = HL_state, fill = group,
@@ -180,7 +179,7 @@ BBN_TempInt_TH %>%
        y = "Threshold (dB)",
        color = "Hearing loss?"
   ) +
-  facet_wrap( ~ group, ncol = 5, scales = "free_x") +
+  # facet_wrap( ~ HL_state, ncol = 5, scales = "free_x") +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
@@ -349,10 +348,11 @@ print(TempInt_Rxn_Graph)
 
 BBN_TempInt_Rxn_individual_graphs =
   BBN_TempInt_Rxn %>%
-  filter(Intensity < 95 & Intensity > 19) %>%
+  filter(Intensity < 85 & Intensity > 19) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>%
            factor(levels = c("4", "8", "16", "32", "BBN"))) %>%
-  filter(group %in% c("Group 3", "Group 3 Redo")) %>%
+  filter(group %in% c("Group 2", "Group 3", "Group 3 Redo")) %>%
+  filter(HL_state %in% c("baseline", "post-HL")) %>%
   group_by(rat_ID, rat_name) %>%
   do(
     single_rat_graph =
@@ -375,6 +375,7 @@ BBN_TempInt_Rxn_individual_graphs =
          title = glue("{unique(.$rat_name)} - Reaction curves for BBN at baseline"),
     ) +
     scale_x_continuous(breaks = seq(-50, 90, by = 10)) +
+    facet_wrap( ~ HL_state, ncol = 2, scales = "fixed") +
     theme_classic() +
     theme(
       plot.title = element_text(hjust = 0.5),
