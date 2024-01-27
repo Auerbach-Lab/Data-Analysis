@@ -104,11 +104,13 @@ car::qqPlot(hit_percent_by_BG.aov.data$hit_percent)
 summary(hit_percent_by_BG.aov)
 
 hit_percent_by_BG.aov.stats = tidy(hit_percent_by_BG.aov) %>% mutate(sig = stars.pval(p.value))
+
+# TODO: FIX as not working
 # Non-Parametric Post Hoc:
 hit_percent_by_BG.aov.postHoc =
   hit_percent_by_BG.aov.data %>%
     group_by(BG) %>%
-    summarise(dunns = tryCatch(FSA::dunnTest(hit_percent ~ HL_state, method = "none")$res, error = function(err){NA}),
+    summarise(dunns = tryCatch(FSA::dunnTest(Gaus ~ HL_state, method = "none")$res, error = function(err){NA}),
               .groups = "drop") %>%
     unnest_wider(dunns) %>%
     filter(! is.na(Comparison)) %>%
