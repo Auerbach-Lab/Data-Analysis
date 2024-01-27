@@ -101,12 +101,40 @@ hit_percent_by_BG.aov = aov(Gaus ~ HL_state * BG, data = hit_percent_by_BG.aov.d
 Parametric_Check(hit_percent_by_BG.aov)
 # Not normal even with transform but soooo close
 car::qqPlot(hit_percent_by_BG.aov.data$hit_percent)
-summary(hit_percent_by_BG.aov)
+# summary(hit_percent_by_BG.aov)
 
-hit_percent_by_BG.aov.stats = tidy(hit_percent_by_BG.aov) %>% mutate(sig = stars.pval(p.value))
+# Kruskal testing
+hit_percent_by_BG.aov = 
+  hit_percent_by_BG.aov.data %>% 
+    summarise(Comparison = kruskal.test(hit_percent ~ BG)$data.name,
+              P.unadj = kruskal.test(hit_percent ~ BG)$p.value) %>%
+  bind_rows(hit_percent_by_BG.aov.data %>%
+              summarise(Comparison = kruskal.test(hit_percent ~ HL_state)$data.name,
+                        P.unadj = kruskal.test(hit_percent ~ HL_state)$p.value)) %>%
+  # Interaction Effects?
+  bind_rows(hit_percent_by_BG.aov.data %>%
+              summarise(Comparison = kruskal.test(hit_percent ~ BG)$data.name,
+                        P.unadj = kruskal.test(hit_percent ~ BG)$p.value,
+                        .by = HL_state)) %>%
+  bind_rows(hit_percent_by_BG.aov.data %>%
+              summarise(Comparison = kruskal.test(hit_percent ~ HL_state)$data.name,
+                        P.unadj = kruskal.test(hit_percent ~ HL_state)$p.value,
+                        .by = BG)) %>%
+  # Adjust P and add stars
+  mutate(P.adj = p.adjust(P.unadj, "BH"),
+         sig = stars.pval(P.adj))
+
+
+filter(hit_percent_by_BG.aov, sig != " ")
 
 # TODO: FIX as not working
 # Non-Parametric Post Hoc:
+hit_percent_by_BG.aov.postHoc = 
+  hit_percent_by_BG.aov.data %>% 
+  
+
+filter(hit_percent_by_BG.aov.postHoc, sig != " ")
+
 hit_percent_by_BG.aov.postHoc =
   hit_percent_by_BG.aov.data %>%
     group_by(BG) %>%
