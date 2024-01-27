@@ -62,7 +62,7 @@ core_data = dataset %>%
                         TRUE ~ -100),
          HL_state = case_when(HL == -1 ~ "baseline",
                               HL < 3 ~ "HL",
-                              HL >= 3 && HL < 15  ~ "recovery",
+                              HL >= 3 & HL < 15  ~ "recovery",
                               HL >= 15 ~ "post-HL",
                               HL == -100 ~ "issue",
                               TRUE ~ "issue") %>% factor(levels = c("baseline", "HL", "recovery", "post-HL"), ordered = TRUE),
