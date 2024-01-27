@@ -85,6 +85,7 @@ core_data = dataset %>%
 # core_data = filter(core_data, rat_ID %in% rats_survived_to_post_HL)
 
 # Descriptive Stats -------------------------------------------------------
+cat("getting stats...")
 stats_table =
   core_data %>%
   # Use rat_ID because its sure to be unique
@@ -117,6 +118,8 @@ stats_table_detail =
 
 
 # dprime ------------------------------------------------------------------
+cat("d' ...")
+
 # needed for TH and dprime table so stop at in-between
 dprime_table =
   core_data %>%
@@ -151,7 +154,7 @@ dprime_5step_table =
 
 
 # Calculate Overall TH ----------------------------------------------------
-
+cat("thresholds...")
 # Threshold calculation calculation based on TH_cutoff intercept of fit curve
 # LOESS: Local Regression is a non-parametric approach that fits multiple regressions
 # see http://r-statistics.co/Loess-Regression-With-R.html
@@ -201,7 +204,7 @@ TH_table_steps =
 
 
 # Get Reaction times by rat -----------------------------------------------
-
+cat("reaction times...")
 Rxn_table =
   core_data %>%
   # Get Reaction times:
@@ -282,7 +285,7 @@ TH_table_detail = TH_table_detail %>% rename(Frequency = contains("Freq"),
 
 
 # Rxn over TH calc --------------------------------------------------------
-
+cat("reaction times over TH...")
 # Limit to Over TH
 TH_filter <- function(df) {
   ID = unique(df$rat_ID)

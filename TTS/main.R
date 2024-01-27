@@ -63,7 +63,9 @@ Group_3 = c(338, 339, 340, 341, 342, 343)
 
 # Import Data -----------------------------------------
 # errors, post ABRs and 'maintenance' days are automatically removed
+cat("Loading data...")
 source(glue("{code_folder}/TTS_data.R"))
+cat("done\n")
 
 
 # # Analysis ----------------------------------------------------------------
