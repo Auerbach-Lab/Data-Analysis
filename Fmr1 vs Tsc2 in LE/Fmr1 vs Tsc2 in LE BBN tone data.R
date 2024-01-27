@@ -54,6 +54,7 @@ Calculate_TH <- function(df) {
   # points(TH_x, TH_y, col="red")
   # # add line to plot
   # abline(h=1.5, col="blue")
+  # # Save
   # dev.copy(png,
   #          glue("C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Rollout Issues/dprime plots/{rat_name} {Freq}kHz {Dur}ms {step_size}.png"))
   # dev.off()
@@ -68,6 +69,7 @@ Calculate_TH <- function(df) {
   # # plot
   # plot(fit_drda,
   #      main = glue("{rat_name} @ {Freq}kHz & {Dur}ms {step_size}, TH: {round(TH_drda, digits = 1)}"))
+  # # Save
   # dev.copy(png,
   #          glue("C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Rollout Issues/dprime plots/{rat_name} {Freq}kHz {Dur}ms {step_size} ddra.png"))
   # dev.off()
@@ -176,7 +178,6 @@ Rxn_table_over_TH = Rxn_table %>%
   # Get Averages
   mutate(Rxn = mean(Rxn, na.rm = TRUE)) %>% 
   unique()
-
 
 
 # Time to learning --------------------------------------------------------
