@@ -9,8 +9,11 @@ Parametric_Check <- function(AOV.data) {
 }
 
 # Descriptive Stats -------------------------------------------------------
-# Trial Count
-trial_count.aov.data = stats_table
+
+## Trial Count -----------------------------------------------------------
+# Both BBN & tone
+trial_count.aov.data = stats_table %>%
+  select(rat_ID:stim_type, trial_count)
 trial_count.aov.data$Gaus = LambertW::Gaussianize(trial_count.aov.data$trial_count)[, 1]
 trial_count.aov = aov(trial_count ~ HL_state * stim_type, data = trial_count.aov.data)
 
@@ -19,9 +22,14 @@ Parametric_Check(trial_count.aov)
 summary(trial_count.aov)
 
 trial_count.aov.stats = tidy(trial_count.aov) %>% mutate(sig = stars.pval(p.value))
-# No post-Hoc testing as only stim_type is significant
 
-# Trial Count for tones by BG
+# Post-Hoc testing
+trial_count.aov.postHoc =
+  tidy(TukeyHSD(trial_count.aov)) %>% mutate(sig = stars.pval(adj.p.value))
+
+filter(trial_count.aov.postHoc, ! sig %in% c(" ", "."))
+
+### Trial Count by BG (mostly tones, but some BBN) ------------
 trial_count_by_BG.aov.data = stats_table_by_BG %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
   mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL")),
@@ -39,8 +47,12 @@ Parametric_Check(trial_count_by_BG.aov)
 summary(trial_count_by_BG.aov)
 
 trial_count_by_BG.aov.stats = tidy(trial_count_by_BG.aov) %>% mutate(sig = stars.pval(p.value))
-# No post-Hoc testing as nothing significant
 
+# Post-Hoc testing
+trial_count_by_BG.aov.postHoc =
+  tidy(TukeyHSD(trial_count_by_BG.aov)) %>% mutate(sig = stars.pval(adj.p.value))
+
+filter(trial_count_by_BG.aov.postHoc, ! sig %in% c(" ", "."))
 
 
 # Hit% Count
@@ -443,7 +455,7 @@ dprime.aov = aov(Gaus ~ Frequency * HL_state * BG_type * BG_Intensity,
               data = dprime.aov.data)
 
 Parametric_Check(dprime.aov)
-#dprime very not spherical
+# dprime very not spherical
 # summary(dprime.aov)
 
 # Do repeated Kruskal tests
