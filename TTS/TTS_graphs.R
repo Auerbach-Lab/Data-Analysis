@@ -810,3 +810,34 @@ ggsave(filename = glue("dprime in BG all.jpg"),
        path = save_folder,
        plot = last_plot(),
        width = 8, height = 6, units = "in", dpi = 300)
+
+
+# dprime graph ------------------------------------------------------------
+
+dprime_table %>%
+  # Get Averages
+  reframe(dprime = mean(dprime, na.rm = TRUE),
+          .by = c(rat_ID, rat_name, HL_state, detail, Freq, Dur, dB)) %>%
+  unique() %>%
+  filter(rat_ID < 200) %>%
+  filter(Freq  == 4 & Dur == 50 & detail == "Mixed") %>%
+  filter(HL_state %in% c("baseline", "post-HL")) %>%
+  ggplot(aes(x = dB, y = dprime, color = HL_state, fill = HL_state, group = HL_state)) +
+  geom_hline(yintercept  = 1.5, color = "blue", linetype = "longdash", alpha = 0.5) +
+  stat_summary(fun = mean,
+               fun.min = function(x) mean(x, na.rm = TRUE) - sd(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + sd(x),
+               geom = "errorbar", width = 0, position = position_dodge(0.25), linewidth = 1) +
+  # stat_summary(fun = mean, geom = "point", size = 3, position = position_dodge(1)) +
+  # stat_summary(fun = function(x) mean(x),
+  #              fun.min = function(x) mean(x) - sd(x),
+  #              fun.max = function(x) mean(x) + sd(x),
+  #              geom = "ribbon", show.legend = FALSE) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), geom = "line", linewidth = 2, alpha = 0.9) +
+  scale_x_continuous(breaks = seq(-30, 90, by = 10), limits = c(9, 61)) +
+  scale_color_manual(values = c("black", "red", "green")) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    panel.grid.minor.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
