@@ -31,8 +31,10 @@ dataset = run_archive %>%
   # Omit Invalid runs
   filter(invalid != "TRUE") %>%
   #Omit runs with wrong delay window, the negate means it returns non-matches
-  #ISSUE: gives warning because it expects a vector not a dataframe
-  filter(str_detect(warnings_list, pattern = "wrong delay window", negate = TRUE)) %>%
+  #ISSUE: gives warning because it expects a vector not a tibble
+  suppressWarnings(
+    filter(str_detect(as.vector(warnings_list), pattern = "wrong delay window", negate = TRUE)) 
+  ) %>%
   # Omit Blue3 (267)
   filter(rat_ID != 267) %>%
   # Get essential columns in usable form; expands the dataframe
