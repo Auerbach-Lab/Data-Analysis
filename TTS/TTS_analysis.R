@@ -40,7 +40,7 @@ trial_count_by_BG.aov.data = stats_table_by_BG %>%
          ) %>% factor(levels = c("BBN with no BG", "Tones with no BG", "Pink noise at 30dB",
                                  "Pink noise at 50dB", "White noise at 50dB")))
 trial_count_by_BG.aov.data$Gaus = LambertW::Gaussianize(trial_count_by_BG.aov.data$trial_count)[, 1]
-trial_count_by_BG.aov = aov(trial_count ~ HL_state * BG, data = trial_count_by_BG.aov.data)
+trial_count_by_BG.aov = aov(trial_count ~ HL_state * stim_type * BG, data = trial_count_by_BG.aov.data)
 
 Parametric_Check(trial_count_by_BG.aov)
 # Normal un-transformed
@@ -55,25 +55,38 @@ trial_count_by_BG.aov.postHoc =
 filter(trial_count_by_BG.aov.postHoc, ! sig %in% c(" ", "."))
 
 
-# Hit% Count
+## Hit% Count ------------------------------------
+### Complete model -----
 hit_percent.aov.data = stats_table
 hit_percent.aov.data$Gaus = LambertW::Gaussianize(hit_percent.aov.data$hit_percent)[, 1]
-hit_percent.aov = aov(Gaus ~ HL_state * stim_type, data = hit_percent.aov.data)
+hit_percent.full_model.aov = aov(Gaus ~ HL_state * stim_type, data = hit_percent.aov.data)
 
-Parametric_Check(hit_percent.aov)
-# Normal with Gausian transform
+Parametric_Check(hit_percent.full_model.aov)
+# Normal with Gausian transform but not otherwise
 car::qqPlot(hit_percent.aov.data$Gaus)
 
-summary(hit_percent.aov)
-hit_percent.aov.stats = tidy(hit_percent.aov) %>% mutate(sig = stars.pval(p.value))
+summary(hit_percent.full_model.aov)
+hit_percent.full_model.aov.stats = tidy(hit_percent.full_model.aov) %>% mutate(sig = stars.pval(p.value))
 
 # Post-Hoc
-hit_percent.aov.postHoc =
-  tidy(TukeyHSD(hit_percent.aov)) %>% mutate(sig = stars.pval(adj.p.value))
+hit_percent.full_model.aov.postHoc =
+  tidy(TukeyHSD(hit_percent.full_model.aov)) %>% mutate(sig = stars.pval(adj.p.value))
 
-filter(hit_percent.aov.postHoc, sig != " ")
+filter(hit_percent.full_model.aov.postHoc, sig != " ")
 
-# Hit rate for tones by BG
+### Actual (simple model) --------------
+hit_percent.aov = aov(Gaus ~ HL_state * stim_type, 
+                      data = filter(hit_percent.aov.data, HL_state %in% c("baseline", "post-HL")))
+
+Parametric_Check(hit_percent.aov)
+# close w/ hit_percent but good with Gausian transform
+summary(hit_percent.aov)
+
+# No significance so NO valid post-hoc
+tidy(TukeyHSD(hit_percent.aov)) %>% mutate(sig = stars.pval(adj.p.value)) %>%
+  filter(sig != " ")
+
+### Hit rate by BG ------
 hit_percent_by_BG.aov.data = stats_table_by_BG %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
   mutate(BG = case_when(
