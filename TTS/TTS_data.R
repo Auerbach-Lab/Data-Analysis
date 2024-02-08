@@ -41,8 +41,8 @@ dataset = run_archive %>%
   unnest_wider(assignment) %>%
   # Only keep relevant Experiments
   filter(experiment %in% c("TTS")) %>%
-  # Omit Training & Reset days
   filter(! phase %in% c("Octave")) %>%
+  filter(! task %in% c("Duration Testing")) %>%
   unnest_wider(stats) %>%
   rowwise %>%
   mutate(step_size = Get_Step_Size(summary),
@@ -178,7 +178,8 @@ TH_table_detail =
   core_data %>%
   # re-nest by Frequency
   unnest(dprime) %>%
-  nest(dprime = c(rat_name, date, Freq, Dur, dB, dprime), .by = c(rat_ID, rat_name, Freq, HL_state, BG_type, BG_Intensity, Dur, detail)) %>%
+  nest(dprime = c(rat_name, date, Freq, Dur, dB, dprime), 
+       .by = c(rat_ID, rat_name, Freq, HL_state, BG_type, BG_Intensity, Dur, detail)) %>%
   # calculate TH
   rowwise() %>%
   mutate(TH = Calculate_TH(dprime)) %>%
