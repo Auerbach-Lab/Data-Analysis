@@ -394,3 +394,59 @@ BBN_TempInt_Rxn_individual_graphs =
 
 # Show all the individual graphs
 BBN_TempInt_Rxn_individual_graphs$single_rat_graph
+
+
+# Temp. Integration Testing -----------------------------------------------
+
+TI_testing_core_data = 
+  run_archive %>%
+    # Omit Invalid runs
+    filter(invalid != "TRUE") %>%
+    #Omit runs with wrong delay window, the negate means it returns non-matches
+    #ISSUE: gives warning because it expects a vector not a tibble
+    suppressWarnings(
+      filter(str_detect(as.vector(warnings_list), pattern = "wrong delay window", negate = TRUE)) 
+    ) %>%
+    unnest_wider(assignment) %>%
+    # Only keep relevant Experiments
+    filter(experiment %in% c("TTS")) %>%
+    filter(task %in% c("Duration Testing")) %>%
+    # record date of hearing loss, Sex, & Genotype
+    left_join(rat_archive, by = c("rat_ID" = "Rat_ID")) %>%
+    unnest_wider(stats) %>%
+    # Omit days with > 45% FA, i.e. guessing
+    filter(FA_percent < FA_cutoff) 
+
+TI_testing_data = TI_testing_core_data %>%
+  select(-reaction) %>%
+  unnest(dprime) %>%
+  left_join(TI_testing_core_data %>% select(-dprime) %>% unnest(reaction),
+            # For Reaction & dprime
+            by = join_by(!!!intersect(TI_testing_core_data %>% select(-reaction) %>% unnest(dprime) %>% names,
+                                      TI_testing_core_data %>% select(-dprime) %>% unnest(reaction) %>% names),
+                         Freq == `Freq (kHz)`, dB == `Inten (dB)`, Dur == `Dur (ms)`)) %>%
+  reframe(Reaction = mean(Rxn * 1000, na.rm = TRUE),
+          dprime = mean(dprime, na.rm = TRUE),
+          .by = c(rat_name, rat_ID, Freq, dB, Dur)) %>%
+  group_by(rat_name, rat_ID, Freq, dB) %>%
+  do(mutate(., Rxn_norm = Reaction/filter(., Dur == 50)$Reaction,
+            Rxn_diff = Reaction - filter(., Dur == 50)$Reaction)) %>%
+  mutate(dB = as.factor(dB))
+
+## Master Graph ------------------------------------------------------------
+ggplot(TI_testing_data, aes(x = Dur, y = Rxn_diff, fill = dB, group = interaction(dB, Dur))) +
+  geom_boxplot() +
+  geom_line(aes(linetype = rat_name, color = dB, group = interaction(rat_name, dB)),
+            linewidth = 0.8) +
+  theme_ipsum_es() +
+  theme(legend.position = "bottom")
+
+## By duration Graph ------------------------------------------------------------
+ggplot(TI_testing_data, aes(x = Dur, y = Rxn_diff, fill = dB, group = interaction(dB, Dur))) +
+  geom_line(aes(linetype = rat_name, color = dB, group = interaction(rat_name, dB)),
+            linewidth = 0.8) +
+  geom_dl(aes(label = rat_name), method = list("last.points","bumpup", cex = 0.8)) +
+  xlim(NA, 320) +
+  facet_wrap(~ dB) +
+  theme_ipsum_es() +
+  theme(legend.position = "bottom")
