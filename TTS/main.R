@@ -12,7 +12,7 @@ library(purrr); library(forcats); library(glue); library(lubridate); library(bro
 
 # analysis & visualization
 library(psycho); library(ggplot2); library(nortest); library(hrbrthemes); library(gtools); 
-library(FSA); library(nlstools); library(nlraa)
+library(FSA); library(nlstools); library(nlraa); library(directlabels)
 # FSA provides an SE calc
 
 
@@ -75,8 +75,12 @@ cat("done\n")
 #
 # source(glue("{code_folder}/TTS_analysis.R"))
 #
-# # Graphing ----------------------------------------------------------------
-# # ISSUE: Plots don't show.
-#
+# Graphing ----------------------------------------------------------------
+
+cat("Graphing...")
+
 # source(glue("{code_folder}/TTS_graphs.R"))
+source(glue("{code_folder}/Temporal Integration.R"))
+
+cat("done\n")
 
