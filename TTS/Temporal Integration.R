@@ -66,6 +66,23 @@ BBN_TempInt_Rxn =
                            rat_ID %in% Group_3 ~ "Group 3",
                            .default = "Unknown") %>% ordered(levels = c("Pilot", "Group 1", "Group 2", "Group 3", "Group 3 Redo")))
 
+BBN_TempInt_Rxn_Mixed = 
+  Rxn_table_detail %>%
+  # limit to individuals with baseine & post-HL
+  filter(! rat_name %in% c("Green2", "Orange1")) %>%
+  # Remove rat with permanent threshold shifts
+  filter(rat_ID != 191 | rat_name != "Green12") %>%
+  # limit to BBN with no background noise
+  filter(detail %in% c("Mixed") & Frequency == 0 & BG_Intensity  == "None") %>%
+  # Add group numbers to look for effects between groups
+  mutate(group = case_when(rat_ID %in% Group_TTS_pilot ~ "Pilot",
+                           rat_ID %in% Group_1 ~ "Group 1",
+                           rat_ID %in% Group_2 ~ "Group 2",
+                           rat_ID %in% Group_3 & detail == "Recheck" ~ "Group 3 Redo",
+                           rat_ID %in% Group_3 ~ "Group 3",
+                           .default = "Unknown") %>% ordered(levels = c("Pilot", "Group 1", "Group 2", "Group 3", "Group 3 Redo")))
+
+
 # Calculate Change in Rxn -------------------------------------------------
 
 BBN_TempInt_Rxn_change =
@@ -395,6 +412,50 @@ BBN_TempInt_Rxn_individual_graphs =
 # Show all the individual graphs
 BBN_TempInt_Rxn_individual_graphs$single_rat_graph
 
+## Mixed Duration ------------------------------------------------------
+
+BBN_TempInt_Rxn_Mixed_individual_graphs =
+  BBN_TempInt_Rxn_Mixed %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>%
+           factor(levels = c("4", "8", "16", "32", "BBN"))) %>%
+  filter(group %in% c("Group 3", "Group 3 Redo")) %>%
+  filter(HL_state %in% c("baseline")) %>%
+  group_by(rat_ID, rat_name) %>%
+  do(
+    single_rat_graph =
+      ggplot(data = .,
+             aes(x = Intensity, y = Rxn, 
+                 color = as.factor(Duration), 
+                 linetype = group, shape = group,
+                 group = interaction(group, as.factor(Duration)))) +
+      # Individual lines
+      stat_summary(fun = mean,
+                   fun.min = function(x) mean(x) - FSA::se(x),
+                   fun.max = function(x) mean(x) + FSA::se(x),
+                   geom = "errorbar", width = 1, position = position_dodge(1)) +
+      stat_summary(fun = mean, geom = "point", position = position_dodge(1), size = 2) +
+      stat_summary(fun = mean, geom = "line", position = position_dodge(1)) +
+      labs(x = "Intensity (dB)",
+           y = "Reaction time (ms, mean +/- SE)",
+           color = "Duration", 
+           shape = "Group", linetype = "Group",
+           title = glue("{unique(.$rat_name)} - Reaction curves for BBN at baseline"),
+      ) +
+      scale_x_continuous(breaks = seq(-50, 90, by = 10)) +
+      facet_wrap( ~ HL_state, ncol = 2, scales = "fixed") +
+      theme_classic() +
+      theme(
+        plot.title = element_text(hjust = 0.5),
+        panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+        panel.grid.minor.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+      ) +
+      theme(#legend.position = c(0.9, 0.8),
+        legend.background=element_blank())
+  )
+
+# Show all the individual graphs
+BBN_TempInt_Rxn_Mixed_individual_graphs$single_rat_graph
+
 
 # Temp. Integration Testing -----------------------------------------------
 
@@ -410,7 +471,10 @@ TI_testing_core_data =
     unnest_wider(assignment) %>%
     # Only keep relevant Experiments
     filter(experiment %in% c("TTS")) %>%
-    filter(task %in% c("Duration Testing")) %>%
+    filter(rat_ID > 300) %>%
+    filter(task %in% c("Duration Testing", "Rxn", "TH") & detail == "Mixed") %>%
+    mutate(data_set = case_when(task == "Duration Testing" ~ "Single Intensity Testing",
+                                task %in% c("Rxn", "TH") ~ "Mixed Intensity BBN")) %>%
     # record date of hearing loss, Sex, & Genotype
     left_join(rat_archive, by = c("rat_ID" = "Rat_ID")) %>%
     unnest_wider(stats) %>%
@@ -427,26 +491,92 @@ TI_testing_data = TI_testing_core_data %>%
                          Freq == `Freq (kHz)`, dB == `Inten (dB)`, Dur == `Dur (ms)`)) %>%
   reframe(Reaction = mean(Rxn * 1000, na.rm = TRUE),
           dprime = mean(dprime, na.rm = TRUE),
-          .by = c(rat_name, rat_ID, Freq, dB, Dur)) %>%
+          .by = c(rat_name, rat_ID, data_set, Freq, dB, Dur)) %>%
   group_by(rat_name, rat_ID, Freq, dB) %>%
   do(mutate(., Rxn_norm = Reaction/filter(., Dur == 50)$Reaction,
-            Rxn_diff = Reaction - filter(., Dur == 50)$Reaction)) %>%
-  mutate(dB = as.factor(dB))
+            Rxn_diff = Reaction - filter(., Dur == 50)$Reaction))
 
 ## Master Graph ------------------------------------------------------------
-ggplot(TI_testing_data, aes(x = Dur, y = Rxn_diff, fill = dB, group = interaction(dB, Dur))) +
-  geom_boxplot() +
-  geom_line(aes(linetype = rat_name, color = dB, group = interaction(rat_name, dB)),
-            linewidth = 0.8) +
-  theme_ipsum_es() +
-  theme(legend.position = "bottom")
+
+TI_testing_data %>%
+  filter(data_set == "Single Intensity Testing") %>%
+  mutate(dB = as.factor(dB)) %>%
+  ggplot(aes(x = Dur, y = Rxn_diff, fill = dB, group = interaction(dB, Dur))) +
+    geom_boxplot() +
+    geom_line(aes(linetype = rat_name, color = dB, group = interaction(rat_name, dB)),
+              linewidth = 0.8) +
+    theme_ipsum_es() +
+    theme(legend.position = "bottom")
 
 ## By duration Graph ------------------------------------------------------------
-ggplot(TI_testing_data, aes(x = Dur, y = Rxn_diff, fill = dB, group = interaction(dB, Dur))) +
-  geom_line(aes(linetype = rat_name, color = dB, group = interaction(rat_name, dB)),
-            linewidth = 0.8) +
-  geom_dl(aes(label = rat_name), method = list("last.points","bumpup", cex = 0.8)) +
-  xlim(NA, 320) +
-  facet_wrap(~ dB) +
-  theme_ipsum_es() +
-  theme(legend.position = "bottom")
+
+TI_testing_data %>%
+  filter(data_set == "Single Intensity Testing") %>%
+  mutate(dB = as.factor(dB)) %>%
+  ggplot(aes(x = Dur, y = Rxn_diff, fill = dB, group = interaction(dB, Dur))) +
+    geom_line(aes(linetype = rat_name, color = dB, group = interaction(rat_name, dB)),
+              linewidth = 0.8) +
+    geom_dl(aes(label = rat_name), method = list("last.points","bumpup", cex = 0.8)) +
+    xlim(NA, 320) +
+    facet_wrap(~ dB) +
+    theme_ipsum_es() +
+    theme(legend.position = "bottom")
+
+## Mixed Rxn Graph --------------------------------------------------------
+
+TI_testing_core_data %>%
+  # filter(data_set == "Mixed Intensity BBN") %>%
+  unnest(reaction) %>%
+  ggplot(aes(x = `Inten (dB)`, y = Rxn, 
+             color = as.factor(`Dur (ms)`), shape = as.factor(`Dur (ms)`),
+             group = as.factor(`Dur (ms)`), rat_ID)) +
+  stat_summary(fun = mean,
+               fun.min = function(x) mean(x) - FSA::se(x),
+               fun.max = function(x) mean(x) + FSA::se(x),
+               geom = "errorbar", width = 2, position = position_dodge(0.1)) +
+  stat_summary(fun = mean, geom = "point", position = position_dodge(0.1), size = 2) +
+  stat_summary(fun = mean, geom = "line", position = position_dodge(0.1)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Duration", shape = "Duration",
+       linetype = "Rat"
+  ) +
+  scale_x_continuous(breaks = seq(-50, 90, by = 10)) +
+  facet_wrap(~ rat_name, scales = "free_y") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    panel.grid.minor.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+  ) +
+  theme(#legend.position = c(0.9, 0.8),
+    legend.background=element_blank())
+
+TI_testing_core_data %>%
+  # filter(data_set == "Mixed Intensity BBN") %>%
+  unnest(dprime) %>%
+  ggplot(aes(x = dB, y = dprime, 
+             color = as.factor(Dur), shape = as.factor(Dur),
+             group = as.factor(Dur), rat_ID)) +
+  stat_summary(fun = mean,
+               fun.min = function(x) mean(x) - FSA::se(x),
+               fun.max = function(x) mean(x) + FSA::se(x),
+               geom = "errorbar", width = 2, position = position_dodge(0.1)) +
+  stat_summary(fun = mean, geom = "point", position = position_dodge(0.1), size = 2) +
+  stat_summary(fun = mean, geom = "line", position = position_dodge(0.1)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Duration", shape = "Duration",
+       linetype = "Rat"
+  ) +
+  scale_x_continuous(breaks = seq(-50, 90, by = 10)) +
+  facet_wrap(~ rat_name, scales = "free_y") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    panel.grid.minor.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+  ) +
+  theme(#legend.position = c(0.9, 0.8),
+    legend.background=element_blank())
+
