@@ -23,6 +23,7 @@ core_data = dataset %>%
          genotype = str_extract(Genotype, pattern = "(WT|KO|Het)$"))
 
 # Calculate Overall TH ----------------------------------------------------
+cat("Caluclating: thresholds...")
 
 # Threshold calculation calculation based on TH_cutoff intercept of fit curve
 # LOESS: Local Regression is a non-parametric approach that fits multiple regressions
@@ -33,17 +34,15 @@ Calculate_TH <- function(df) {
   Dur = unique(df$Dur)
   step_size = if(is.null(df$step_size)) "All data" else glue("{unique(df$step_size)}dB step size")
 
-  # model -----------------------------------------------------------------
-  fit = loess(dprime ~ dB, data = df)
-  TH = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff, ties = "ordered")$y
+  ## Default model ----------------------------------------------------------
+  # fit = loess(dprime ~ dB, data = df)
+  # TH = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff, ties = "ordered")$y
 
-
-  # # Graph it --------------------------------------------------------------
   # # Get TH point (it needs inverting for some reason)
   # TH_point = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff, ties = "ordered")
   # TH_x = TH_point$y
   # TH_y = TH_point$x
-  # 
+
   # # Actually plot
   # plot(fit,
   #      main = glue("{rat_name} @ {Freq}kHz & {Dur}ms {step_size} TH: {round(TH, digits = 1)}"),
@@ -58,15 +57,14 @@ Calculate_TH <- function(df) {
   # dev.copy(png,
   #          glue("C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Rollout Issues/dprime plots/{rat_name} {Freq}kHz {Dur}ms {step_size}.png"))
   # dev.off()
-  # 
-  # 
-  # # Alt Method ---------------------------------------------------------------
-  # # Dose-dependant curve which suggests 4-parameter logistic function is best fit
-  # library(drda)
-  # fit_drda = drda(dprime ~ dB, data = df)
-  # # pull the 1st number which is the estimate, the other 2 are the 95% CI range
-  # TH_drda = effective_dose(fit_drda, y = TH_cutoff, type = "absolute")[,1]
-  # # plot
+
+  ## DRDA Model ---------------------------------------------------------------
+  # Dose-dependant curve which suggests 4-parameter logistic function is best fit
+  fit_drda = drda(dprime ~ dB, data = df)
+  # pull the 1st number which is the estimate, the other 2 are the 95% CI range
+  TH_drda = effective_dose(fit_drda, y = TH_cutoff, type = "absolute")[,1]
+  
+  # # Plot DRDA
   # plot(fit_drda,
   #      main = glue("{rat_name} @ {Freq}kHz & {Dur}ms {step_size}, TH: {round(TH_drda, digits = 1)}"))
   # # Save
@@ -76,7 +74,7 @@ Calculate_TH <- function(df) {
 
 
   # print(glue("{rat_name} @ {Freq}kHz & {Dur}ms: {round(TH, digits = 1)} or DRDA {round(TH_drda, digits = 1)}"))
-  return(TH)
+  return(TH_drda)
 }
 
 TH_table = core_data %>%
@@ -130,6 +128,7 @@ TH_table_step =
 
 
 # Get Reaction times by rat -----------------------------------------------
+cat("reaction times...")
 
 Rxn_table = core_data %>%
   # Omit Training & Reset days
@@ -181,6 +180,7 @@ Rxn_table_over_TH = Rxn_table %>%
 
 
 # Time to learning --------------------------------------------------------
+cat("learning times...")
 
 Learning_streak = core_data %>%
   dplyr::filter(task %in% c("Training")) %>%
@@ -191,8 +191,11 @@ Learning_streak = core_data %>%
 
 
 # Renaming -----------------------------------------------------
+cat("updating column names...")
 
 TH_table = rename(TH_table, Frequency = Freq, Duration = Dur)
 
 Rxn_table = rename(Rxn_table, Frequency = `Freq (kHz)`, Duration = `Dur (ms)`, Intensity = `Inten (dB)`)
+
+cat("done.\n")
 
