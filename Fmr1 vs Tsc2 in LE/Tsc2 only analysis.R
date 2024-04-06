@@ -1,4 +1,4 @@
-source("Fmr1 vs Tsc2 in LE BBN tone data.R")
+# source("Fmr1 vs Tsc2 in LE BBN tone data.R")
 
 # Variables ---------------------------------------------------------------
 
@@ -95,10 +95,13 @@ Tsc2_TH_averages = TH_table %>%
 Tsc2_TH_gaph = 
   TH_table %>%
     filter(line == "Tsc2-LE") %>%
-    filter(detail != "Rotating" & Frequency == 0) %>%
+    filter(Frequency == 0) %>%
+    filter(detail %in% c("Alone", "Recheck")) %>%
     {if (drop_TP3) filter(., rat_name != "TP3")} %>%
-    filter(detail != "Rotating") %>%
-    mutate(group = if_else(rat_ID < 300, "Group 1", "Group 2")) %>%
+    mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                             rat_ID < 300 ~ "Group 1",
+                             rat_ID >= 300 ~ "Group 2",
+                             .default = "Unknown")) %>%
     mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% 
              factor(levels = c("BBN", "4", "8", "16", "32"))) %>%
     ggplot(aes(x = genotype, y = TH, shape = line,
@@ -108,7 +111,7 @@ Tsc2_TH_gaph =
     stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
                  position = position_dodge(1), vjust = 2, size = 3) +
     # scale_color_manual(values = c("Tsc2-LE" = "darkblue", "Fmr1-LE" = "red")) +
-    scale_color_manual(values = c("Group 1" = "darkblue", "Group 2" = "goldenrod")) +
+    scale_color_manual(values = c("Group 1" = "darkblue", "Group 2" = "goldenrod", "Group 2 Recheck" = "green")) +
     scale_fill_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "lightcoral")) +
     labs(x = "",
          y = "Threshold (dB, mean +/- SE)",
@@ -178,9 +181,9 @@ Tsc_single_frequency_rxn_graph =
   Rxn_table %>%
     {if (drop_TP3) filter(., rat_name != "TP3")} %>%
     filter(line == "Tsc2-LE") %>%
-    filter(Duration %in% c(300, 100)) %>%
+    filter(Duration %in% c(50, 100, 300)) %>%
     # rename(Intensity = `Inten (dB)`) %>%
-    filter(detail == "Alone") %>%
+    filter(detail %in% c("Alone", "Recheck")) %>%
     mutate(group = if_else(rat_ID < 300, "Group 1", "Group 2")) %>%
     # filter(rat_ID < 314) %>%
     mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
@@ -189,14 +192,18 @@ Tsc_single_frequency_rxn_graph =
     filter(Frequency == single_Frequency) %>%
     ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(group),
                color = genotype, group = interaction(Duration, group, genotype))) +
+  ## Overall average lines
     stat_summary(aes(x = Intensity, y = Rxn,color = genotype,group = genotype),
                  fun = function(x) mean(x, na.rm = TRUE),
                  fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
                  fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
-                 geom = "errorbar", width = 1.5, linetype = "solid", linewidth = 1.5, alpha = 0.5) +
+                 geom = "errorbar", width = 1.5, linetype = "solid", linewidth = 1.5, alpha = 0.5,
+                 position = position_dodge(4)) +
     stat_summary(aes(x = Intensity, y = Rxn,color = genotype,group = genotype),
                  fun = function(x) mean(x, na.rm = TRUE),
-                 geom = "line", linetype = "solid", linewidth = 1.5, alpha = 0.5) +
+                 geom = "line", linetype = "solid", linewidth = 1.5, alpha = 0.5,
+                 position = position_dodge(4)) +
+  ## Lines for each group
     stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                  fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
                  fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
@@ -212,7 +219,7 @@ Tsc_single_frequency_rxn_graph =
     scale_linetype_manual(values = c("Group 1" = "solid", "Group 2" = "longdash")) +
     scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
     scale_x_continuous(breaks = seq(0, 90, by = 10)) +
-    facet_wrap(~ factor(Duration, levels = c(300, 100))) +
+    facet_wrap(~ Duration) +
     theme_classic() +
     theme(
       plot.title = element_text(hjust = 0.5),
