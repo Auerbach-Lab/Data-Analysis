@@ -23,11 +23,12 @@ library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stri
 library(purrr); library(forcats); library(broom); library(glue)
 
 # analysis & visualization
-library(psycho); library(ggplot2); library(nortest); library(hrbrthemes); library(gtools)
+library(psycho); library(ggplot2); library(nortest); library(hrbrthemes); library(gtools); library(drda)
 
 
 
 # Load Necessary Datasets -------------------------------------------------
+cat("Loading data.\n")
 load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 rat_decoder = fread(glue("{projects_folder}/rat_archive.csv"),
                     select = c("Rat_ID", "DOB", "Sex", "Genotype", "HL_date"))
