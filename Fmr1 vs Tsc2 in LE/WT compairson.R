@@ -202,3 +202,59 @@ stat_summary(fun = function(x) mean(x, na.rm = TRUE),
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   ) 
+
+
+### Combined Group2 (original + recheck) ----
+
+Rxn_table %>%
+  filter(Frequency == 0) %>%
+  filter(genotype == "WT") %>%
+  {if (drop_TP3) filter(., rat_name != "TP3")} %>%
+  filter(Duration %in% c(50, 100, 300)) %>%
+  bind_rows(Rxn_table_LE) %>%
+  filter(detail %in% c("Alone", "Recheck")) %>%
+  mutate(group = if_else(rat_ID < 300, "Group 1", "Group 2")) %>%
+  group_by(rat_ID, rat_name, Frequency, Duration, Intensity, sex, genotype, line, group) %>%
+  # Get Averages for each rat regardles of detail
+  do(transmute(., Rxn = mean(Rxn, na.rm = TRUE) * 1000)) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
+  filter(! str_detect(Intensity, pattern = "5$")) %>%
+  filter(Intensity < 90 & Intensity > 10) %>%
+  filter(genotype == "WT") %>%
+  ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(group), shape = line, fill = line,
+             color = genotype, group = interaction(Duration, group, line, genotype))) +
+  ## Overall average lines
+  # stat_summary(aes(x = Intensity, y = Rxn,color = genotype,group = genotype),
+  #              fun = function(x) mean(x, na.rm = TRUE),
+  #              fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+  #              fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+  #              geom = "errorbar", width = 1.5, linetype = "solid", linewidth = 1.5, alpha = 0.5,
+  #              position = position_dodge(4)) +
+  # stat_summary(aes(x = Intensity, y = Rxn,color = genotype,group = genotype),
+  #              fun = function(x) mean(x, na.rm = TRUE),
+  #              geom = "line", linetype = "solid", linewidth = 1.5, alpha = 0.5,
+  #              position = position_dodge(4)) +
+## Lines for each group
+stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+             fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+             fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+             geom = "errorbar", width = 1.5, position = position_dodge(1)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(1), size = 3) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "line", position = position_dodge(1)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "", shape = "Line", fill = "Line",
+       subtitle = "Combined original + recheck for Group2",
+       caption = (if_else(drop_TP3, "Without Het F TP3", "With TP3"))) +
+  scale_linetype_manual(values = c("Group 1" = "solid", "Group 2" = "longdash")) +
+  scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+  scale_shape_manual(values = c("LE" = 21, "Fmr1-LE" = 22, "Tsc2-LE" = 24)) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(~ Duration) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
