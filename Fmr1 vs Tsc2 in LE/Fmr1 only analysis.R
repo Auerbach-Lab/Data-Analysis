@@ -1,4 +1,4 @@
-source("Fmr1 vs Tsc2 in LE BBN tone data.R")
+# source("Fmr1 vs Tsc2 in LE BBN tone data.R")
 
 # Variables ---------------------------------------------------------------
 
@@ -59,7 +59,7 @@ single_Frequency = "BBN"
 Fmr1_single_frequency_rxn_graph = 
   Rxn_table %>%
     filter(line == "Fmr1-LE") %>%
-    filter(Duration %in% c(300)) %>%
+    filter(Duration %in% c(50, 100, 300)) %>%
     # rename(Intensity = `Inten (dB)`) %>%
     filter(detail == "Alone") %>%
     mutate(group = if_else(rat_ID < 300, "Group 1", "Group 2")) %>%
@@ -70,14 +70,18 @@ Fmr1_single_frequency_rxn_graph =
     filter(Frequency == single_Frequency) %>%
     ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(group),
                color = genotype, group = interaction(Duration, group, genotype))) +
-    # stat_summary(aes(x = Intensity, y = Rxn,color = genotype,group = genotype),
-    #              fun = function(x) mean(x, na.rm = TRUE),
-    #              fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
-    #              fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
-    #              geom = "errorbar", width = 1.5, linetype = "solid", linewidth = 1.5, alpha = 0.5) +
-    # stat_summary(aes(x = Intensity, y = Rxn,color = genotype,group = genotype),
-    #              fun = function(x) mean(x, na.rm = TRUE),
-    #              geom = "line", linetype = "solid", linewidth = 1.5, alpha = 0.5) +
+    ## Overall average lines
+    stat_summary(aes(x = Intensity, y = Rxn,color = genotype,group = genotype),
+                 fun = function(x) mean(x, na.rm = TRUE),
+                 fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+                 fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+                 geom = "errorbar", width = 1.5, linetype = "solid", linewidth = 1.5, alpha = 0.5,
+                 position = position_dodge(4)) +
+    stat_summary(aes(x = Intensity, y = Rxn,color = genotype,group = genotype),
+                 fun = function(x) mean(x, na.rm = TRUE),
+                 geom = "line", linetype = "solid", linewidth = 1.5, alpha = 0.5,
+                 position = position_dodge(4)) +
+    ## Lines for each group
     stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                  fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
                  fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
@@ -92,7 +96,7 @@ Fmr1_single_frequency_rxn_graph =
     scale_linetype_manual(values = c("Group 1" = "solid", "Group 2" = "longdash")) +
     scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
     scale_x_continuous(breaks = seq(0, 90, by = 10)) +
-    facet_wrap(~ factor(Duration, levels = c(300, 100))) +
+    facet_wrap(~ Duration) +
     theme_classic() +
     theme(
       plot.title = element_text(hjust = 0.5),
