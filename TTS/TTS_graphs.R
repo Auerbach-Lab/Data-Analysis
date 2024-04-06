@@ -17,14 +17,7 @@ stats_table %>%
   stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 2) +
   labs(title = "Trial Count",
        x = "Hearing Loss Phase (through time)",
-       y = "Trial Count",
-       caption = parse(text = glue(
-         "'No significant effect of hearing loss states ('*f[{filter(trial_count.aov.stats, term == 'HL_state')$df}]*' = {
-         round(filter(trial_count.aov.stats, term == 'HL_state')$statistic, digits = 2)}, p = {
-         round(filter(trial_count.aov.stats, term == 'HL_state')$p.value, digits = 2)}). Significantly fewer trials of tones ('*f[{filter(trial_count.aov.stats, term == 'stim_type')$df}]*' = {
-         round(filter(trial_count.aov.stats, term == 'stim_type')$statistic, digits = 2)}, p = {
-         round(filter(trial_count.aov.stats, term == 'stim_type')$p.value, digits = 2)})'"
-       ))) +
+       y = "Trial Count") +
   facet_wrap( ~ stim_type, ncol = 5, scales = "fixed", strip.position = "bottom") +
   theme_classic() +
   theme(
@@ -350,13 +343,13 @@ TH_table_detail %>%
   # stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 2) +
   scale_fill_manual(values = c("#F8766D", "#00BFC4"), guide = "none") +
   scale_color_manual(values = c("Alone" = "black", "Mixed" = "azure3"), guide = "legend") +
-  labs(title = "BBN thresholds for alone or mixed durations",
-       x = "Stimulus Duration (ms)",
-       y = "Threshold (dB)",
-       color = "Stimulus\npresentation",
-       caption = parse(text = glue("'No primary effect presentation style on threshold ('*chi^2*' = {
-                                   round(BBN.detail.stats$statistic, digits = 2)}, p = {
-                                   round(BBN.detail.stats$p.value, digits = 2)})'"))) +
+  # labs(title = "BBN thresholds for alone or mixed durations",
+  #      x = "Stimulus Duration (ms)",
+  #      y = "Threshold (dB)",
+  #      color = "Stimulus\npresentation",
+  #      caption = parse(text = glue("'No primary effect presentation style on threshold ('*chi^2*' = {
+  #                                  round(BBN.detail.stats$statistic, digits = 2)}, p = {
+  #                                  round(BBN.detail.stats$p.value, digits = 2)})'"))) +
   facet_wrap( ~ HL_state, ncol = 5, scales = "free_x") +
   theme_classic() +
   theme(
@@ -512,7 +505,6 @@ TH_table_steps %>%
     legend.position = "right",
     panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
   )
-
 
 # Reaction times ----------------------------------------------------------
 
@@ -841,3 +833,4 @@ dprime_table %>%
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
     panel.grid.minor.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
