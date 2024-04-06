@@ -8,6 +8,7 @@ rat_archive = fread(glue("{projects_folder}/rat_archive.csv"),
 
 
 # Get core data -----------------------------------------------------------
+cat("filtering...")
 
 Get_Step_Size <- function(summary) {
   temp = summary$dB_step_size %>% unique
@@ -161,14 +162,28 @@ cat("thresholds...")
 Calculate_TH <- function(df) {
   # Sort for ordered - this needs to be by dB not date
   df = arrange(df, dB)
+  
+  # # Default fitting ----
   fit = loess(dprime ~ dB, data = df)
   TH = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff, ties = "ordered")$y
+  
+  
+  # # DRDA method (4-par log) ---
+  # Dose-dependent curve which suggests 4-parameter logistic function is best fit
+  # fit_drda = drda(dprime ~ dB, data = df)
+  # # pull the 1st number which is the estimate, the other 2 are the 95% CI range
+  # TH_drda = effective_dose(fit_drda, y = TH_cutoff, type = "absolute")[,1]
+  # # plot
+  # plot(fit_drda,
+  #      main = glue("{rat_name} @ {Freq}kHz & {Dur}ms {step_size}, TH: {round(TH_drda, digits = 1)}"))
+  
   return(TH)
 }
 
 TH_table =
   dprime_table %>%
-  nest(dprime = c(rat_name, date, Freq, Dur, dB, dprime), .by = c(rat_ID, rat_name, Freq, HL_state, BG_type, BG_Intensity, Dur)) %>%
+  nest(dprime = c(rat_name, date, Freq, Dur, dB, dprime), 
+       .by = c(rat_ID, rat_name, Freq, HL_state, BG_type, BG_Intensity, Dur)) %>%
   # calculate TH
   rowwise() %>%
   mutate(TH = Calculate_TH(dprime)) %>%
@@ -178,7 +193,7 @@ TH_table_detail =
   core_data %>%
   # re-nest by Frequency
   unnest(dprime) %>%
-  nest(dprime = c(rat_name, date, Freq, Dur, dB, dprime), 
+  nest(dprime = c(rat_name, date, Freq, Dur, dB, dprime),
        .by = c(rat_ID, rat_name, Freq, HL_state, BG_type, BG_Intensity, Dur, detail)) %>%
   # calculate TH
   rowwise() %>%
