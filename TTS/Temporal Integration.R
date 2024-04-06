@@ -41,14 +41,15 @@ BBN_TempInt_TH =
   # # Remove struggling rat
   # filter(rat_name != "Green24") %>%
   # limit to BBN with no background noise
-  filter(detail %in% c("Alone", "Recheck") & Frequency == 0 & BG_Intensity  == "None") %>%
+  filter(detail %in% c("Alone", "Recheck", "Recheck 2") & Frequency == 0 & BG_Intensity  == "None") %>%
   # Add group numbers to look for effects between groups
   mutate(group = case_when(rat_ID %in% Group_TTS_pilot ~ "Pilot",
                            rat_ID %in% Group_1 ~ "Group 1",
                            rat_ID %in% Group_2 ~ "Group 2",
+                           rat_ID %in% Group_3 & detail == "Recheck 2" ~ "Group 3 Recheck 2",
                            rat_ID %in% Group_3 & detail == "Recheck" ~ "Group 3 Redo",
-                           rat_ID %in% Group_3 & detail != "Recheck" ~ "Group 3",
-                           .default = "Unknown") %>% ordered(levels = c("Pilot", "Group 1", "Group 2", "Group 3", "Group 3 Redo")))
+                           rat_ID %in% Group_3 ~ "Group 3",
+                           .default = "Unknown") %>% ordered(levels = c("Pilot", "Group 1", "Group 2", "Group 3", "Group 3 Redo", "Group 3 Recheck 2")))
 
 BBN_TempInt_Rxn =
   Rxn_table_detail %>%
@@ -57,14 +58,15 @@ BBN_TempInt_Rxn =
   # Remove rat with permanent threshold shifts
   filter(rat_ID != 191 | rat_name != "Green12") %>%
   # limit to BBN with no background noise
-  filter(detail %in% c("Alone", "Recheck") & Frequency == 0 & BG_Intensity  == "None") %>%
+  filter(detail %in% c("Alone", "Recheck", "Recheck 2") & Frequency == 0 & BG_Intensity  == "None") %>%
   # Add group numbers to look for effects between groups
   mutate(group = case_when(rat_ID %in% Group_TTS_pilot ~ "Pilot",
                            rat_ID %in% Group_1 ~ "Group 1",
                            rat_ID %in% Group_2 ~ "Group 2",
+                           rat_ID %in% Group_3 & detail == "Recheck 2" ~ "Group 3 Recheck 2",
                            rat_ID %in% Group_3 & detail == "Recheck" ~ "Group 3 Redo",
                            rat_ID %in% Group_3 ~ "Group 3",
-                           .default = "Unknown") %>% ordered(levels = c("Pilot", "Group 1", "Group 2", "Group 3", "Group 3 Redo")))
+                           .default = "Unknown") %>% ordered(levels = c("Pilot", "Group 1", "Group 2", "Group 3", "Group 3 Redo", "Group 3 Recheck 2")))
 
 BBN_TempInt_Rxn_Mixed = 
   Rxn_table_detail %>%
@@ -78,9 +80,10 @@ BBN_TempInt_Rxn_Mixed =
   mutate(group = case_when(rat_ID %in% Group_TTS_pilot ~ "Pilot",
                            rat_ID %in% Group_1 ~ "Group 1",
                            rat_ID %in% Group_2 ~ "Group 2",
+                           rat_ID %in% Group_3 & detail == "Recheck 2" ~ "Group 3 Recheck 2",
                            rat_ID %in% Group_3 & detail == "Recheck" ~ "Group 3 Redo",
                            rat_ID %in% Group_3 ~ "Group 3",
-                           .default = "Unknown") %>% ordered(levels = c("Pilot", "Group 1", "Group 2", "Group 3", "Group 3 Redo")))
+                           .default = "Unknown") %>% ordered(levels = c("Pilot", "Group 1", "Group 2", "Group 3", "Group 3 Redo", "Group 3 Recheck 2")))
 
 
 # Calculate Change in Rxn -------------------------------------------------
@@ -108,10 +111,12 @@ Threshold_Recheck =
   BBN_TempInt_TH %>% 
     filter(rat_ID %in% Group_3) %>%
     group_by(rat_ID, rat_name, Duration) %>%
-    do(tibble(TH_1 = filter(., detail != "Recheck")$TH, 
+    do(tibble(TH_1 = filter(., ! detail %in% c("Recheck", "Recheck 2"))$TH, 
               TH_2 = if(! is_na(filter(., detail == "Recheck")$TH)) filter(., detail == "Recheck")$TH
                         else NA_integer_,
-              Improvement = round(TH_1 - TH_2, digits = 1))
+              TH_3 = if(! is_na(filter(., detail == "Recheck 2")$TH)) filter(., detail == "Recheck 2")$TH
+                        else NA_integer_,
+              Improvement = round(TH_1 - TH_3, digits = 1))
        ) %>%
   arrange(Duration, rat_ID)
 
@@ -189,7 +194,7 @@ BBN_TempInt_TH %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
   mutate(HL_state = if_else(HL_state == "post-HL", "After Hearing Loss and recovery", "Baseline") %>%
            factor(levels = c("Baseline", "After Hearing Loss and recovery"))) %>%
-  filter(group %in% c("Group 1", "Group 3", "Group 3 Redo")) %>%
+  filter(group %in% c("Group 1", "Group 3", "Group 3 Redo", "Group 3 Recheck 2")) %>%
   filter(HL_state == "Baseline") %>%
   ggplot(aes(x = as.factor(Duration), y = TH,
              color = HL_state, fill = group,
@@ -270,7 +275,7 @@ BBN_TempInt_Rxn %>%
          HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
   # filter(group %in% c("Group 1", "Group 3", "Group 2", "Group 3 Redo")) %>%
-  filter(group %in% c("Group 3", "Group 3 Redo")) %>%
+  filter(group %in% c("Group 3", "Group 3 Redo", "Group 3 Recheck 2")) %>%
   ggplot(aes(x = Intensity, y = Rxn, 
              color = as.factor(Duration), shape = as.factor(Duration),
              group = interaction(HL_state, as.factor(Duration)))) +
@@ -374,7 +379,7 @@ BBN_TempInt_Rxn_individual_graphs =
   filter(Intensity < 85 & Intensity > 19) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>%
            factor(levels = c("4", "8", "16", "32", "BBN"))) %>%
-  filter(group %in% c("Group 2", "Group 3", "Group 3 Redo")) %>%
+  filter(group %in% c("Group 2", "Group 3", "Group 3 Redo", "Group 3 Recheck 2")) %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
   group_by(rat_ID, rat_name) %>%
   do(
@@ -459,6 +464,9 @@ BBN_TempInt_Rxn_Mixed_individual_graphs$single_rat_graph
 
 # Temp. Integration Testing -----------------------------------------------
 
+## data import -----
+load(glue("{projects_folder}/run_archive.Rdata"), .GlobalEnv)
+
 TI_testing_core_data = 
   run_archive %>%
     # Omit Invalid runs
@@ -496,19 +504,19 @@ TI_testing_data = TI_testing_core_data %>%
   do(mutate(., Rxn_norm = Reaction/filter(., Dur == 50)$Reaction,
             Rxn_diff = Reaction - filter(., Dur == 50)$Reaction))
 
-## Master Graph ------------------------------------------------------------
+## Single intensity Testing Graph -------------------------------------------
 
 TI_testing_data %>%
   filter(data_set == "Single Intensity Testing") %>%
   mutate(dB = as.factor(dB)) %>%
   ggplot(aes(x = Dur, y = Rxn_diff, fill = dB, group = interaction(dB, Dur))) +
     geom_boxplot() +
-    geom_line(aes(linetype = rat_name, color = dB, group = interaction(rat_name, dB)),
-              linewidth = 0.8) +
+    # geom_line(aes(linetype = rat_name, color = dB, group = interaction(rat_name, dB)),
+    #           linewidth = 0.8) +
     theme_ipsum_es() +
     theme(legend.position = "bottom")
 
-## By duration Graph ------------------------------------------------------------
+## Individual By duration Graph --------------------------------------------
 
 TI_testing_data %>%
   filter(data_set == "Single Intensity Testing") %>%
@@ -522,8 +530,9 @@ TI_testing_data %>%
     theme_ipsum_es() +
     theme(legend.position = "bottom")
 
-## Mixed Rxn Graph --------------------------------------------------------
+## Mixed Graphs ----------------------------------------------------------
 
+### Rxn Graph ------
 TI_testing_core_data %>%
   # filter(data_set == "Mixed Intensity BBN") %>%
   unnest(reaction) %>%
@@ -538,26 +547,30 @@ TI_testing_core_data %>%
   stat_summary(fun = mean, geom = "line", position = position_dodge(0.1)) +
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
+       title= "Reaction Time",
        color = "Duration", shape = "Duration",
        linetype = "Rat"
   ) +
-  scale_x_continuous(breaks = seq(-50, 90, by = 10)) +
+  scale_x_continuous(breaks = seq(-50, 90, by = 10), limits = c(20, NA)) +
   facet_wrap(~ rat_name, scales = "free_y") +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
     panel.grid.minor.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
   ) +
   theme(#legend.position = c(0.9, 0.8),
     legend.background=element_blank())
 
+### d' Graph ------
 TI_testing_core_data %>%
   # filter(data_set == "Mixed Intensity BBN") %>%
   unnest(dprime) %>%
   ggplot(aes(x = dB, y = dprime, 
              color = as.factor(Dur), shape = as.factor(Dur),
              group = as.factor(Dur), rat_ID)) +
+  geom_hline(yintercept = 1.5, color = "blue", linetype = "longdash") + 
   stat_summary(fun = mean,
                fun.min = function(x) mean(x) - FSA::se(x),
                fun.max = function(x) mean(x) + FSA::se(x),
@@ -565,11 +578,13 @@ TI_testing_core_data %>%
   stat_summary(fun = mean, geom = "point", position = position_dodge(0.1), size = 2) +
   stat_summary(fun = mean, geom = "line", position = position_dodge(0.1)) +
   labs(x = "Intensity (dB)",
-       y = "Reaction time (ms, mean +/- SE)",
+       y = "d' (mean +/- SE)",
+       title= "d'",
        color = "Duration", shape = "Duration",
        linetype = "Rat"
   ) +
   scale_x_continuous(breaks = seq(-50, 90, by = 10)) +
+  xlim(NA, 60) + 
   facet_wrap(~ rat_name, scales = "free_y") +
   theme_classic() +
   theme(
