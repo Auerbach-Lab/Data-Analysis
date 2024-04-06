@@ -12,7 +12,7 @@ library(purrr); library(forcats); library(glue); library(lubridate); library(bro
 
 # analysis & visualization
 library(psycho); library(ggplot2); library(nortest); library(hrbrthemes); library(gtools); 
-library(FSA); library(nlstools); library(nlraa); library(directlabels)
+library(FSA); library(nlstools); library(nlraa); library(directlabels); library(drda)
 # FSA provides an SE calc
 
 
