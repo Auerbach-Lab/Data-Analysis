@@ -3,8 +3,9 @@ load(glue("{projects_folder}/run_archive.Rdata"), .GlobalEnv)
 rat_archive = fread(glue("{projects_folder}/rat_archive.csv"), 
                     select = c("Rat_ID", "DOB", "Sex", "Genotype", "HL_date"))
 
-# # Individual Trial Data
-# load(paste0(projects_folder, "TTS_archive.Rdata"), .GlobalEnv)
+# Individual Trial Data
+# needed for Probability analysis
+trial_archive = fread(paste0(projects_folder, "TTS_archive.csv.gz"))
 
 
 # Get core data -----------------------------------------------------------
@@ -25,7 +26,7 @@ Get_Step_Size <- function(summary) {
 core_columns = c("date", "rat_name", "rat_ID",
                  "file_name", "experiment", "phase", "task", "detail",
                  "stim_type", "analysis_type", "block_size", "step_size", "dB_min", "complete_block_count",
-                 "dprime", "reaction", "FA_percent", "trial_count", "hit_percent")
+                 "dprime", "reaction", "FA_percent", "trial_count", "hit_percent", "UUID")
 
 #TODO: deal with multiple runs in a day, 
 dataset = run_archive %>%
@@ -56,7 +57,7 @@ core_data = dataset %>%
   # Omit days with > 45% FA, i.e. guessing
   filter(FA_percent < FA_cutoff) %>%
   # record date of hearing loss
-  left_join(select(rat_archive, Rat_ID, HL_date), by = c("rat_ID" = "Rat_ID")) %>%
+  left_join(select(rat_archive, Rat_ID, Sex, HL_date), by = c("rat_ID" = "Rat_ID")) %>%
   # Calculate time since HL
   mutate(date = ymd(date), HL_date = ymd(HL_date),
          HL = case_when(is.na(HL_date) ~ -1,
@@ -90,7 +91,7 @@ cat("getting stats...")
 stats_table =
   core_data %>%
   # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, HL_state, stim_type) %>%
+  group_by(rat_ID, rat_name, Sex, HL_state, stim_type) %>%
   # Get Averages
   summarise(trial_count = mean(trial_count, na.rm = TRUE),
             hit_percent = mean(hit_percent, na.rm = TRUE),
