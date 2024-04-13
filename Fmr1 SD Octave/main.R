@@ -1,0 +1,64 @@
+# NOTES -------------------------------------------------------------------
+
+
+# Load Packages -----------------------------------------------------------
+# data loading
+library(data.table); library(openxlsx)
+
+# data manipulation
+library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); 
+library(purrr); library(forcats); library(glue); library(lubridate); library(broom)
+
+# analysis & visualization
+library(ggplot2); library(psycho); library(drda); library(hrbrthemes); library(gtools); 
+library(FSA); library(directlabels)
+# FSA provides an SE calc
+
+
+# # Clear workspace ---------------------------------------------------------
+# rm(list = ls())
+
+
+# Variables ---------------------------------------------------------------
+# Location of the datasets
+projects_folder = "Z:/Behavior-autoanalysis/"
+
+# Location of excel spreadsheets
+excel_folder = "Z:/Project Excels/"
+
+# Location of the R scripts
+code_folder = "Y:/GitHub/Data Analysis/Fmr1 SD Octave/"
+
+# Explict location to save files to:
+save_folder = "C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Fmr1 SD Octave/"
+
+# Sensitivity cutoff for determining hearing thresholds
+TH_cutoff = 1.5
+
+# Working directory -------------------------------------------------------
+setwd(code_folder)
+
+
+# Import Data -----------------------------------------
+# errors, post ABRs and 'maintenance' days are automatically removed
+cat("Loading data...")
+source(glue("{code_folder}/data.R"))
+cat("done\n")
+
+
+# # Analysis ----------------------------------------------------------------
+# # Graph Hit, FA and Trial Count from summary data
+# # calculate hearing threshold (from all data) and remove any trials below hearing level.
+# # ISSUE: Plots don't show.
+#
+# source(glue("{code_folder}/TTS_analysis.R"))
+#
+# Graphing ----------------------------------------------------------------
+
+cat("Graphing...")
+
+# source(glue("{code_folder}/TTS_graphs.R"))
+source(glue("{code_folder}/Temporal Integration.R"))
+
+cat("done\n")
+
