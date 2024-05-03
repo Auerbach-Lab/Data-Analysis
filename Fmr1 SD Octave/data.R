@@ -32,28 +32,6 @@ dataset = run_archive %>%
   unnest_wider(stats) %>%
   unnest(dprime) %>%
   # Decode genotype & record date of hearing loss
-  left_join(rat_archive, by = c("rat_ID" = "Rat_ID"))
-
-Discrimination_data = dataset %>%
-  # Omit Training & Reset days; this is the same as filtering to task == Discrimination
-  filter(analysis_type == "Octave") %>%
-  # Calculate time since HL
-  mutate(date = ymd(date), HL_date = ymd(HL_date),
-         HL = case_when(is.na(HL_date) ~ -1,
-                        date <= HL_date ~ -1,
-                        date > HL_date ~ as.numeric(date - HL_date),
-                        TRUE ~ -100),
-         HL_state = case_when(HL == -1 ~ "baseline",
-                              HL < 3 ~ "HL",
-                              HL >= 3 & HL < 15  ~ "recovery",
-                              HL >= 15 ~ "post-HL",
-                              HL == -100 ~ "issue",
-                              TRUE ~ "issue") %>% factor(levels = c("baseline", "HL", "recovery", "post-HL"), ordered = TRUE)) 
-
-Training_data = dataset %>%
-  # Only keep Training & Holding days
-  filter(analysis_type != "Octave") %>%
-  # record date of hearing loss
   left_join(rat_archive, by = c("rat_ID" = "Rat_ID")) %>%
   # Calculate time since HL
   mutate(date = ymd(date), HL_date = ymd(HL_date),
@@ -67,281 +45,341 @@ Training_data = dataset %>%
                               HL >= 15 ~ "post-HL",
                               HL == -100 ~ "issue",
                               TRUE ~ "issue") %>% factor(levels = c("baseline", "HL", "recovery", "post-HL"), ordered = TRUE)) %>%
+  # Change Genotype to drop line
+  mutate(Genotype = str_remove(Genotype, "Fmr1_SD_"))
+
+Discrimination_data = dataset %>%
+  # Omit Training & Reset days; this is the same as filtering to task == Discrimination
+  filter(analysis_type == "Octave") %>%
+  # pointless column
+  select(-dprime) %>%
+  # get reaction time
+  mutate(reaction = map_dbl(reaction, pluck, "Rxn")*1000) %>%
+  # get d'
+  unnest(FA_detailed) %>%
+  # rename Frequency
+  rename(Frequency = `Freq (kHz)`) %>%
+  # calculate octave steps - string extract w/ regex is to get the go frequency
+  mutate(octave_fraction = log(as.numeric(str_extract(file_name, pattern = "[:digit:]+?(?=-.+?kHz)"))/Frequency)/log(2),
+         octave_steps = abs(round(octave_fraction * 12))) %>%
+  # determine if 1/8 scale or zoomed in 1/16 scale
+  mutate(Type = case_when(all((octave_steps %% 2) == 0) ~ "Broad",
+                          any((octave_steps %% 2) != 0) ~ "Zoom",
+                          .default = "Error"),
+         Range = R.utils::seqToHumanReadable(octave_steps) %>% str_extract(pattern = "[:digit:]+-[:digit:]+"),
+         .by = c(date, rat_ID))
+
+
+Training_data = dataset %>%
+  # Only keep Training & Holding days
+  filter(analysis_type != "Octave") %>%
+  filter(task == "Training") %>%
   filter(HL_state == "baseline")
+
+#TODO: stopped here
+
+
+# Write out for Walker ----------------------------------------------------
+
+# Discrimination_data %>% select(-summary, -threshold, -comments, -warnings_list) %>%
+#   fwrite(glue("C:/Users/Noelle/Box/Behavior Lab/Shared/Walker/Fmr1_SD_Octave_", str_remove_all(Sys.Date(), "-"),".csv"), row.names = FALSE)
+
+# Graphing ----------------------------------------------------------------
+n_fun <- function(x){
+  # print(x)
+  return(data.frame(y = min(x), label = paste0("n = ", length(x))))
+}
 
 
 # Descriptive Stats -------------------------------------------------------
 cat("getting stats...")
 stats_table =
-  core_data %>%
+  dataset %>%
   # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, HL_state, stim_type) %>%
+  group_by(rat_ID, rat_name, Genotype, task, detail) %>%
   # Get Averages
   summarise(trial_count = mean(trial_count, na.rm = TRUE),
             hit_percent = mean(hit_percent, na.rm = TRUE),
             FA_percent = mean(FA_percent, na.rm = TRUE),
             .groups = "drop")
 
-stats_table_by_BG =
-  core_data %>%
-  # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, HL_state, stim_type, BG_type, BG_Intensity) %>%
-  # Get Averages
-  summarise(trial_count = mean(trial_count, na.rm = TRUE),
-            hit_percent = mean(hit_percent, na.rm = TRUE),
-            FA_percent = mean(FA_percent, na.rm = TRUE),
-            .groups = "drop")
+## Graph General Stats ----
+stats_plot = 
+stats_table %>%
+  filter(detail == "Normal") %>%
+  filter(task != "Reset") %>%
+  gather(key = "stat", value = "value", c(trial_count:FA_percent)) %>%
+ggplot(aes(x = Genotype, y = value, fill = Genotype, group = Genotype)) +
+  geom_boxplot() +
+  geom_point(show.legend = FALSE) +
+  stat_summary(fun.data = n_fun, geom = "text", aes(color = Genotype),
+               show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 3) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  labs(x = "",
+       y = "Threshold (octave step)",
+       fill = "Genotype") +
+  facet_wrap(task ~ stat, scales = "free") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
 
-stats_table_detail =
-  core_data %>%
-  # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, HL_state, stim_type, detail) %>%
-  # Get Averages
-  summarise(trial_count = mean(trial_count, na.rm = TRUE),
-            hit_percent = mean(hit_percent, na.rm = TRUE),
-            FA_percent = mean(FA_percent, na.rm = TRUE),
-            .groups = "drop")
+print(stats_plot)
 
+# Threshold ---------------------------------------------------------------
+# relative to octave steps
+cat("calulating thresholds...\n")
 
-# dprime ------------------------------------------------------------------
-cat("d' ...")
-
-# needed for TH and dprime table so stop at in-between
-dprime_table =
-  core_data %>%
-  # re-nest by Frequency
-  unnest(dprime)
-
-dprime_detail_table =
-  dprime_table %>%
-  # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, HL_state, detail, Freq, Dur, dB) %>%
-  # only use BBN because it was the ony one with temporal integration testing
-  filter(Freq == "0") %>%
-  # Get Averages
-  transmute(dprime = mean(dprime, na.rm = TRUE)) %>%
-  unique()
-
-dprime_summary_table =
-  dprime_table %>%
-  # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, HL_state, BG_type, BG_Intensity, Freq, Dur, dB) %>%
-  # Get Averages
-  transmute(dprime = mean(dprime, na.rm = TRUE)) %>%
-  unique()
-
-dprime_5step_table =
-  dprime_table %>%
-  # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, HL_state, step_size, BG_type, BG_Intensity, Freq, Dur, dB) %>%
-  # Get Averages
-  transmute(dprime = mean(dprime, na.rm = TRUE)) %>%
-  unique()
-
-
-# Calculate Overall TH ----------------------------------------------------
-cat("thresholds...")
-# Threshold calculation calculation based on TH_cutoff intercept of fit curve
-# LOESS: Local Regression is a non-parametric approach that fits multiple regressions
-# see http://r-statistics.co/Loess-Regression-With-R.html
-Calculate_TH <- function(df) {
-  # Sort for ordered - this needs to be by dB not date
-  df = arrange(df, dB)
-  
-  # # Default fitting ----
-  fit = loess(dprime ~ dB, data = df)
+Calculate_TH_Octave <- function(df) {
+  fit = loess(dprime ~ octave_steps, data = df)
+  # plot(fit)
   TH = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff, ties = "ordered")$y
-  
-  
-  # # DRDA method (4-par log) ---
-  # Dose-dependent curve which suggests 4-parameter logistic function is best fit
-  # fit_drda = drda(dprime ~ dB, data = df)
-  # # pull the 1st number which is the estimate, the other 2 are the 95% CI range
-  # TH_drda = effective_dose(fit_drda, y = TH_cutoff, type = "absolute")[,1]
-  # # plot
-  # plot(fit_drda,
-  #      main = glue("{rat_name} @ {Freq}kHz & {Dur}ms {step_size}, TH: {round(TH_drda, digits = 1)}"))
-  
+  # print(TH)
   return(TH)
 }
 
-TH_table =
-  dprime_table %>%
-  nest(dprime = c(rat_name, date, Freq, Dur, dB, dprime), 
-       .by = c(rat_ID, rat_name, Freq, HL_state, BG_type, BG_Intensity, Dur)) %>%
-  # calculate TH
-  rowwise() %>%
-  mutate(TH = Calculate_TH(dprime)) %>%
-  select(-dprime)
+octave_TH_table =
+  Discrimination_data %>%
+  # Sort for ordered (start w/ ID which is unique)
+  arrange(rat_ID, rat_name, detail, octave_steps) %>%
+  # Prep for Calculate_TH function
+  nest(data = c(octave_steps, Frequency, dprime), .by = c(rat_ID, rat_name, Genotype, detail)) %>%
+  # mutate not summarise to keep the other columns
+  mutate(TH = map_dbl(data, Calculate_TH_Octave)) %>%
+  select(-data) %>%
+  drop_na()
 
-TH_table_detail =
-  core_data %>%
-  # re-nest by Frequency
-  unnest(dprime) %>%
-  nest(dprime = c(rat_name, date, Freq, Dur, dB, dprime),
-       .by = c(rat_ID, rat_name, Freq, HL_state, BG_type, BG_Intensity, Dur, detail)) %>%
-  # calculate TH
-  rowwise() %>%
-  mutate(TH = Calculate_TH(dprime)) %>%
-  select(-dprime)
+TH = 
+  octave_TH_table %>%
+    reframe(TH = mean(TH, na.rm = TRUE),
+            .by = c(Genotype, detail)) %>%
+    arrange(detail)
 
-TH_table_steps =
-  core_data %>%
-  # re-nest by Frequency
-  unnest(dprime) %>%
-  filter(detail == "Alone") %>%
-  nest(dprime = c(rat_name, date, Freq, Dur, dB, dprime), .by = c(rat_ID, rat_name, Freq, HL_state, BG_type, BG_Intensity, Dur, step_size)) %>%
-  # calculate TH
-  rowwise() %>%
-  mutate(TH = Calculate_TH(dprime),
-         step_size = as.character(step_size)) %>%
-  select(-dprime) %>%
-  rename(Frequency = Freq, Duration = Dur) %>%
-  bind_rows(
-    filter(TH_table_detail, detail == "Alone") %>%
-      mutate(step_size = "Mixed") %>%
-      select(-detail)
+print(TH)
+
+## TH stats -----
+octave_TH_table %>%
+  filter(detail == "Normal") %>%
+  group_by(Genotype) %>%
+  do(shapiro.test(.$TH) %>% tidy()) %>%
+  mutate(sig = stars.pval(p.value)) %>%
+  print
+
+var.test(TH ~ Genotype, 
+         data = as.data.frame(octave_TH_table %>% filter(detail == "Normal"))) %>% 
+  tidy %>% select(method, p.value) %>% mutate(sig = stars.pval(p.value)) %>% print
+
+t.test(TH ~ Genotype, paired = FALSE, alternative = "two.sided", 
+       data = as.data.frame(octave_TH_table %>% filter(detail == "Normal"))) %>% 
+  tidy %>% select(method, p.value) %>% mutate(sig = stars.pval(p.value)) %>% print
+
+## Graph TH -----
+TH_plot = 
+octave_TH_table %>%
+  filter(detail == "Normal") %>%
+ggplot(aes(x = Genotype, y = TH, fill = Genotype, group = Genotype)) +
+  geom_boxplot() +
+  geom_point(show.legend = FALSE) +
+  stat_summary(fun.data = n_fun, geom = "text", aes(color = Genotype),
+               show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 3) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  labs(x = "",
+       y = "Threshold (octave step)",
+       fill = "Genotype") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
 
+print(TH_plot)
 
-# Get Reaction times by rat -----------------------------------------------
-cat("reaction times...")
-Rxn_table =
-  core_data %>%
-  # Get Reaction times:
-  unnest(reaction) %>%
-  # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, HL_state, BG_type, BG_Intensity, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`) %>%
-  # Get Averages
-  transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>%
-  unique()
+# FA % --------------------------------------------------------------------
 
-Rxn_table_detail =
-  core_data %>%
-  # Get Reaction times:
-  unnest(reaction) %>%
-  # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, HL_state, BG_type, BG_Intensity, detail, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`) %>%
-  # Get Averages
-  transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>%
-  unique()
+discrimination_FA_table =
+  Discrimination_data %>%
+  filter(detail == "Normal") %>%
+  group_by(rat_ID, rat_name, Genotype, octave_steps, Type) %>%
+  summarise(FA_percent_detailed = mean(FA_percent_detailed, na.rm = TRUE),
+            .groups = "drop")
 
-CNO_data = unique(filter(core_data, task == "CNO")$rat_ID)
+## Graph of FA -----
+# FA_plot = 
+ggplot(data = discrimination_FA_table, 
+       aes(x = octave_steps, y = FA_percent_detailed * 100,
+           color = Genotype, shape = Type, linetype = Type, group = interaction(Genotype, Type))) +
+  geom_hline(yintercept = 50, color = "forestgreen") +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - FSA::se(x, na.rm = TRUE),
+               fun.max = function(x) mean(x, na.rm = TRUE) + FSA::se(x, na.rm = TRUE),
+               geom = "errorbar", width = 0, position = position_dodge(0.1)) +
+  # mean for genotypes across all frequencies
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "line", linewidth = 1.5, position = position_dodge(.1)) +
+  # geom_smooth(se = FALSE) +
+  # add the TH line
+  # geom_vline(data = TH %>% filter(detail == "Normal"), aes(xintercept = TH, color = Genotype), show.legend = FALSE) +
+  # mean for each frequency by genotype
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(.1), stroke = 2) +
+  # add labels by x-axis
+  # geom_text(data = tibble(octave_steps = 12, FA_percent_detailed = 0,
+  #                         tone = "No Go", Genotype = "WT"),
+  #           aes(label = tone), size = 5, show.legend = FALSE, vjust = 1,
+  #           family = "EconSansCndReg") +
+  # geom_text(data = tibble(octave_steps = 1, FA_percent_detailed = 0,
+  #                         tone = "Go", Genotype = "WT"),
+  #           aes(label = tone), size = 4, show.legend = FALSE, vjust = 1,
+  #           family = "EconSansCndReg") +
+  scale_x_continuous(breaks = c(1, seq(0, 12, by = 2))) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  labs(x = "Octave Step",
+       y = "False Alarm %",
+       # title = "Discrimination across an octave",
+       fill = "Line", shape = "Line",
+       color = "Genotype") +
+  theme_classic() +
+  guides(colour = guide_legend(override.aes = list(linewidth = 1)))
 
-Rxn_table_CNO =
-  core_data %>%
-  filter(rat_ID %in% CNO_data) %>%
-  filter(date < "2023-05-11") %>%
-  mutate(detail = if_else(task == "CNO", "CNO","Baseline")) %>%
-  # Get Reaction times:
-  unnest(reaction) %>%
-  # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, HL_state, BG_type, BG_Intensity, detail, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`) %>%
-  # Get Averages
-  transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>%
-  unique()
+print(FA_plot)
 
-Rxn_5step_table =
-  core_data %>%
-  # Get Reaction times:
-  unnest(reaction) %>%
-  # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, detail, step_size, HL_state, BG_type, BG_Intensity, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`) %>%
-  # Get Averages
-  transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>%
-  unique()
+# Reaction time -----------------------------------------------------------
 
-
-# Rename for ease of use --------------------------------------------------
-
-dprime_summary_table = dprime_summary_table %>% rename(Frequency = c(contains("Freq") | contains("kHz")),
-                                                       Duration = c(contains("Dur") | contains("ms")),
-                                                       Intensity = c(contains("dB")))
-
-dprime_detail_table = dprime_detail_table %>% rename(Frequency = c(contains("Freq") | contains("kHz")),
-                                                      Duration = c(contains("Dur") | contains("ms")),
-                                                      Intensity = c(contains("dB")))
-
-dprime_5step_table = dprime_5step_table %>% rename(Frequency = c(contains("Freq") | contains("kHz")),
-                                                   Duration = c(contains("Dur") | contains("ms")),
-                                                   Intensity = c(contains("dB")))
-
-Rxn_table = Rxn_table %>% rename(Frequency = c(contains("Freq") | contains("kHz")),
-                                 Duration = c(contains("Dur") | contains("ms")),
-                                 Intensity = c(contains("dB")))
-
-Rxn_5step_table = Rxn_5step_table %>% rename(Frequency = c(contains("Freq") | contains("kHz")),
-                                 Duration = c(contains("Dur") | contains("ms")),
-                                 Intensity = c(contains("dB")))
-
-Rxn_table_detail = Rxn_table_detail %>% rename(Frequency = c(contains("Freq") | contains("kHz")),
-                                 Duration = c(contains("Dur") | contains("ms")),
-                                 Intensity = c(contains("dB")))
-
-TH_table = TH_table %>% rename(Frequency = contains("Freq"),
-                               Duration = c(contains("Dur") | contains("ms")))
-
-TH_table_detail = TH_table_detail %>% rename(Frequency = contains("Freq"),
-                                      Duration = c(contains("Dur") | contains("ms")))
+Reaction_data = 
+  Discrimination_data %>%
+    # remove any duplicates caused by unnesting
+    select(rat_ID, reaction, Type, detail, Genotype, UUID) %>% unique %>%
+    reframe(reaction = mean(reaction, na.rm = TRUE),
+            .by = c(rat_ID, detail, Genotype, Type)) %>%
+    filter(Type != "Error")
 
 
-# Rxn over TH calc --------------------------------------------------------
-cat("reaction times over TH...")
-# Limit to Over TH
-TH_filter <- function(df) {
-  ID = unique(df$rat_ID)
-  Dur = unique(df$Duration)
-  kHz = unique(df$Frequency)
-  HL = unique(df$HL_state)
-  BG = unique(df$BG_type)
-  BG_dB = unique(df$BG_Intensity)
+## Rxn stats -----
+Reaction.aov.data = Reaction_data %>%
+  filter(detail == "Normal")
 
-  cuttoff = TH_table %>%
-    filter(Duration == Dur & rat_ID == ID & Frequency == kHz & HL_state == HL & BG_type == BG & BG_Intensity == BG_dB) %>%
-    .$TH
+Reaction.aov.data$Gaus = LambertW::Gaussianize(Reaction.aov.data$reaction)[, 1]
 
-  cuttoff = ifelse(identical(cuttoff, numeric(0)), -99, cuttoff)
+Rxn.aov = aov(reaction ~ Genotype * Type, data = Reaction.aov.data)
 
-  r = df %>%
-    filter(Intensity >= UQ(cuttoff))  # have to use UQ to force the evaluation of the variable
-
-  return(r)
+Parametric_Check <- function(AOV.data) {
+  is_parametric = shapiro.test(AOV.data$residuals)$p.value > 0.05
+  
+  if (is_parametric == TRUE) {writeLines("Normal data proced with ANOVA")} else
+  {writeLines(paste("Non-parametric data so use Kruskal followed by Dunn testing. \nShapiro Test: p =", shapiro.test(AOV.data$residuals)$p.value %>% round(digits = 3)))}
+  
 }
 
-Rxn_table_over_TH = Rxn_table %>%
-  # Prep for TH_filter function
-  ungroup() %>%
-  nest(data = c(rat_ID, HL_state, BG_type, BG_Intensity, Frequency, Duration, Intensity, Rxn), .by = c(rat_ID, rat_name, HL_state, BG_type, BG_Intensity, Frequency, Duration)) %>%
-  # Apply TH_filter
-  mutate(data = map(data, TH_filter)) %>%
-  mutate(tmp = map(data, ~ select(., Intensity, Rxn))) %>%
-  unnest(tmp) %>%
-  select(-data) %>%
-  unique()
+Parametric_Check(Rxn.aov)
 
-Rxn_table_over_TH_detail = Rxn_table_detail %>%
-  # Prep for TH_filter function
-  ungroup() %>%
-  nest(data = c(rat_ID, HL_state, BG_type, BG_Intensity, Frequency, Duration, Intensity, Rxn), .by = c(rat_ID, rat_name, HL_state, BG_type, BG_Intensity, detail, Frequency, Duration)) %>%
-  # Apply TH_filter
-  mutate(data = map(data, TH_filter)) %>%
-  mutate(tmp = map(data, ~ select(., Intensity, Rxn))) %>%
-  unnest(tmp) %>%
-  select(-data) %>%
-  unique()
+summary(Rxn.aov)
 
-Rxn_table_over_TH_step_size = Rxn_5step_table %>%
-  # Prep for TH_filter function
-  ungroup() %>%
-  nest(data = c(rat_ID, HL_state, BG_type, BG_Intensity, Frequency, Duration, Intensity, Rxn), .by = c(rat_ID, rat_name, step_size, HL_state, BG_type, BG_Intensity, Frequency, Duration)) %>%
-  # Apply TH_filter
-  mutate(data = map(data, TH_filter)) %>%
-  mutate(tmp = map(data, ~ select(., Intensity, Rxn))) %>%
-  unnest(tmp) %>%
-  select(-data) %>%
-  unique()
+## Rxn Graph ----
+Reaction_data %>%
+  filter(detail == "Normal") %>%
+  ggplot(aes(x = Type, y = reaction, fill = Genotype, group = Type)) +
+  geom_boxplot() +
+  geom_point(show.legend = FALSE) +
+  stat_summary(fun.data = n_fun, geom = "text", aes(color = Genotype),
+               show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 3) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  labs(x = "",
+       y = "Threshold (octave step)",
+       fill = "Genotype") +
+  facet_wrap(~ Genotype) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
 
+# Training stuff ----------------------------------------------------------
 
+## Days in training -----
+training_days_data = 
+  Training_data %>%
+  summarise(days = n(), Genotype = unique(Genotype),
+            .by = c(rat_ID, detail))
 
+training_days_data$Gaus = LambertW::Gaussianize(training_days_data$days)[, 1]
 
+Taining_days.aov = aov(days ~ Genotype * detail, data = training_days_data)
+
+Parametric_Check(Taining_days.aov)
+
+summary(Taining_days.aov)
+
+TukeyHSD(Taining_days.aov) %>% tidy %>%
+  select(term, contrast, adj.p.value) %>% 
+  mutate(sig = stars.pval(adj.p.value)) %>% print
+
+## Days in each phase/file -----
+training_phase_data = 
+  Training_data %>%
+  summarise(days = n(), Genotype = unique(Genotype), 
+            file_name = unique(file_name), date = min(date),
+            .by = c(rat_ID, detail, file_name)) %>%
+  arrange(rat_ID, date, detail)
+
+### Days Graph ----
+training_days_data %>%
+  # filter(detail == "Normal") %>%
+  ggplot(aes(x = Genotype, y = days, fill = Genotype, group = Genotype)) +
+  geom_boxplot() +
+  geom_point(show.legend = FALSE) +
+  stat_summary(fun.data = n_fun, geom = "text", aes(color = Genotype),
+               show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 3) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  labs(x = "",
+       y = "Threshold (octave step)",
+       fill = "Genotype") +
+  facet_wrap(~ detail) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+## Reversal FA & hit -----
+Reversal_training = 
+  Training_data %>%
+  filter(detail == "Reversed") %>%
+  # calculate relative date from start of reversal
+  group_by(rat_ID) %>%
+  do(arrange(., date) %>% mutate(day = row_number()))
+  
+n_reversal_data =
+  Reversal_training %>% ungroup %>% 
+  reframe(n = paste("n =", n()), dprime_avg = mean(dprime, na.rm = TRUE),
+          .by = c(day, Genotype)) %>%
+  mutate(dprime = if_else(Genotype == "WT", dprime_avg + 0.55, dprime_avg -0.55)) %>%
+  group_by(Genotype, n) %>%
+  do(arrange(., day) %>% head(., n = 1)) %>% arrange(day) %>% print
+  
+Reversal_training %>%  
+  ggplot(aes(x = day, y = dprime, color = Genotype, group = Genotype)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - FSA::se(x, na.rm = TRUE),
+               fun.max = function(x) mean(x, na.rm = TRUE) + FSA::se(x, na.rm = TRUE),
+               geom = "errorbar", width = 0, position = position_dodge(0.2)) +
+  # stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+  #              geom = "line", linewidth = 1.5, position = position_dodge(.2)) +
+  geom_smooth(se = FALSE) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "point", size = 2, position = position_dodge(.2)) +
+  geom_text(data = n_reversal_data, aes(label = n), 
+            show.legend = FALSE, size = 3) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  scale_x_continuous(limits = c(0,25), expand = c(0, 0)) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
 

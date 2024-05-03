@@ -45,20 +45,3 @@ cat("Loading data...")
 source(glue("{code_folder}/data.R"))
 cat("done\n")
 
-
-# # Analysis ----------------------------------------------------------------
-# # Graph Hit, FA and Trial Count from summary data
-# # calculate hearing threshold (from all data) and remove any trials below hearing level.
-# # ISSUE: Plots don't show.
-#
-# source(glue("{code_folder}/TTS_analysis.R"))
-#
-# Graphing ----------------------------------------------------------------
-
-cat("Graphing...")
-
-# source(glue("{code_folder}/TTS_graphs.R"))
-source(glue("{code_folder}/Temporal Integration.R"))
-
-cat("done\n")
-
