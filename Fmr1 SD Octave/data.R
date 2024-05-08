@@ -207,7 +207,7 @@ discrimination_FA_table =
             .groups = "drop")
 
 ## Graph of FA -----
-# FA_plot = 
+FA_plot =
 ggplot(data = discrimination_FA_table, 
        aes(x = octave_steps, y = FA_percent_detailed * 100,
            color = Genotype, shape = Type, linetype = Type, group = interaction(Genotype, Type))) +
