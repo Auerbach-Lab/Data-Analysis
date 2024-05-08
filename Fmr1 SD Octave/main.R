@@ -35,6 +35,9 @@ save_folder = "C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Fmr1 SD Octave/"
 # Sensitivity cutoff for determining hearing thresholds
 TH_cutoff = 1.5
 
+# ABR directory
+ABR_data_folder = "C:/Users/Noelle/Box/ABR recordings/ABR Results/Noelle/Fmr1 SD vs WT littermates/"
+
 # Working directory -------------------------------------------------------
 setwd(code_folder)
 
