@@ -67,7 +67,8 @@ Discrimination_data = dataset %>%
                           any((octave_steps %% 2) != 0) ~ "Zoom",
                           .default = "Error"),
          Range = R.utils::seqToHumanReadable(octave_steps) %>% str_extract(pattern = "[:digit:]+-[:digit:]+"),
-         .by = c(date, rat_ID))
+         .by = c(date, rat_ID)) %>%
+  filter(Type != "Error")
 
 
 Training_data = dataset %>%
@@ -146,6 +147,17 @@ octave_TH_table =
   arrange(rat_ID, rat_name, detail, octave_steps) %>%
   # Prep for Calculate_TH function
   nest(data = c(octave_steps, Frequency, dprime), .by = c(rat_ID, rat_name, Genotype, detail)) %>%
+  # mutate not summarise to keep the other columns
+  mutate(TH = map_dbl(data, Calculate_TH_Octave)) %>%
+  select(-data) %>%
+  drop_na()
+
+octave_TH_table_Zoom =
+  Discrimination_data %>%
+  # Sort for ordered (start w/ ID which is unique)
+  arrange(rat_ID, rat_name, detail, octave_steps) %>%
+  # Prep for Calculate_TH function
+  nest(data = c(octave_steps, Frequency, dprime), .by = c(rat_ID, rat_name, Genotype, detail, Type)) %>%
   # mutate not summarise to keep the other columns
   mutate(TH = map_dbl(data, Calculate_TH_Octave)) %>%
   select(-data) %>%
