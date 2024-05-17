@@ -1,32 +1,23 @@
 # Load Necessary Datasets -------------------------------------------------
 
-# get list of CSVs to append together
-files = list.files(ABR_data_folder, pattern = "\\d+.csv$", recursive = TRUE, full.names = TRUE)
-
-load_csv_file <- function(file_name) {
-  rat_ID = str_remove(file_name, pattern = ABR_data_folder) %>% str_remove(".csv") %>% as.numeric()
-  
-  csv_table = fread(file_name)
-  
-  output = as_tibble(csv_table) %>%
-    # drop Wave not picked
-    filter(Wave_amp != 0 & Wave_lat != 0) %>%
-    mutate(rat_ID = rat_ID)
-  
-  return(output)
-}
-
-# load each CSV file generated from the abr_processor script (credit: Walker Gauthier)
-ABR_all_data = lapply(files, load_csv_file) %>% bind_rows()
-
 rat_genotypes = fread(glue("{ABR_data_folder}/Genotypes.csv"))
 
-ABR_data = left_join(ABR_all_data, rat_genotypes, by = join_by(rat_ID))
+
+# Load CSV file generated from the abr_processor script (credit: Walker Gauthier)
+ABR_single_csv = fread(glue("{ABR_data_folder}/ABR_data.csv"))
+
+ABR_data = left_join(ABR_single_csv %>%
+                       as_tibble() %>%
+                       # drop Wave not picked 
+                       filter(Wave_amp != 0 & Wave_lat != 0) %>%
+                       mutate(rat_ID = str_extract(file, pattern = "00[:digit:]+") %>% as.numeric()),
+                     rat_genotypes,
+                     by = join_by(rat_ID))
 
 
 
-# Write our data for Ben --------------------------------------------------
-# fwrite(ABR_data, glue("C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Fmr1_SD_ABR_data", str_remove_all(Sys.Date(), "-"),".csv"), row.names = FALSE)
+# Write our data ----------------------------------------------------------
+fwrite(ABR_data, glue("C:/Users/Noelle/Box/Behavior Lab/Shared/Walker/Fmr1_SD_ABR_data", str_remove_all(Sys.Date(), "-"),".csv"), row.names = FALSE)
 
 
 # Prep data ---------------------------------------------------------------
@@ -47,6 +38,11 @@ ABR_data_rat =
             RMS = mean(current_rms, na.rm = TRUE),
             .by = c(rat_ID, genotype, current_freq, current_wave, current_inten))
 
+## Sample counts =====
+ABR_data_rat %>% 
+  select(rat_ID, genotype) %>% 
+  unique %>% 
+  reframe(n = n(), .by = c(genotype))
 
 # Ben Poster Plots --------------------------------------------------------
 
@@ -60,10 +56,14 @@ ggplot(data = filter(ABR_data_rat, current_inten == 80),
   labs(x = "Wave",
        y = "Amplitude @ 80dB",
        fill = "Genotype") +
+  facet_wrap(~ current_freq, scales = "free_y") +
   theme_classic(base_size = 20) +
   theme(
-    legend.position=c(.8,.8)
+    # legend.position=c(.8,.8)
+    legend.position=c(.8,.2)
   )
+
+print(Ben_Amp_plot)
 
 ggsave(file="Fmr1_SD_ABR_amp.svg", path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben",
        plot = Ben_Amp_plot, 
@@ -83,10 +83,14 @@ Ben_Lat_plot =
   labs(x = "Wave",
        y = "Latancy @ 80dB",
        fill = "Genotype") +
+  facet_wrap(~ current_freq, scales = "free_y") +
   theme_classic(base_size = 20) +
   theme(
-    legend.position=c(.2,.8)
+    # legend.position=c(.8,.8)
+    legend.position=c(.8,.2)
   )
+
+print(Ben_Lat_plot)
 
 ggsave(file="Fmr1_SD_ABR_lat.svg", path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben",
        plot = Ben_Lat_plot, 

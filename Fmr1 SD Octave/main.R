@@ -14,6 +14,8 @@ library(ggplot2); library(psycho); library(drda); library(hrbrthemes); library(g
 library(FSA); library(directlabels)
 # FSA provides an SE calc
 
+# data saving
+library(svglite)
 
 # # Clear workspace ---------------------------------------------------------
 # rm(list = ls())
@@ -33,10 +35,10 @@ code_folder = "Y:/GitHub/Data Analysis/Fmr1 SD Octave/"
 save_folder = "C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Fmr1 SD Octave/"
 
 # Sensitivity cutoff for determining hearing thresholds
-TH_cutoff = 1.5
+TH_cutoff = 2.0
 
 # ABR directory
-ABR_data_folder = "C:/Users/Noelle/Box/ABR recordings/ABR Results/Noelle/Fmr1 SD vs WT littermates/"
+ABR_data_folder = "C:/Users/Noelle/Box/ABR recordings/ABR Results/Fmr1 SD Rats/"
 
 # Working directory -------------------------------------------------------
 setwd(code_folder)
@@ -45,6 +47,6 @@ setwd(code_folder)
 # Import Data -----------------------------------------
 # errors, post ABRs and 'maintenance' days are automatically removed
 cat("Loading data...")
-source(glue("{code_folder}/data.R"))
+# source(glue("{code_folder}/data.R"))
 cat("done\n")
 
