@@ -137,7 +137,7 @@ Rxn_table = core_data %>%
   filter(FA_percent < FA_cutoff) %>%
   # Get Reaction times:
   unnest(reaction) %>%
-  # Use rat_ID because its sure to be unquie
+  # Use rat_ID because its sure to be unique
   group_by(rat_ID, rat_name, sex, genotype, line, detail, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`) %>%
   # Get Averages
   transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>% 
