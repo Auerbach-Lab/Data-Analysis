@@ -23,7 +23,8 @@ library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stri
 library(purrr); library(forcats); library(broom); library(glue); library(lubridate)
 
 # analysis & visualization
-library(psycho); library(ggplot2); library(nortest); library(hrbrthemes); library(gtools); library(drda)
+library(psycho); library(ggplot2); library(nortest); library(hrbrthemes); 
+library(gtools); library(drda); library(directlabels)
 
 
 
