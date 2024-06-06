@@ -156,7 +156,7 @@ Tsc2_TH_overview_gaph =
     stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
                  position = position_dodge(1), vjust = 2, size = 3) +
     # scale_color_manual(values = c("Tsc2-LE" = "darkblue", "Fmr1-LE" = "red")) +
-    scale_color_manual(values = c("Male" = "blue", "Female" = "red")) +
+    scale_color_manual(values = c("Male" = "blue", "Female" = "coral")) +
     scale_fill_manual(values = c("WT" = "grey40", "Het" = "deepskyblue", "KO" = "lightcoral")) +
     labs(x = "",
          y = "Threshold (dB, mean +/- SE)",
@@ -202,7 +202,10 @@ Tsc2_Rxn_over_TH$Gaus = LambertW::Gaussianize(Tsc2_Rxn_over_TH$Rxn)[, 1]
 
 ## BBN Model ----
   Tsc2.Rxn.BBN.aov.data = Tsc2_Rxn_over_TH %>%
-    filter(Frequency == 0)
+    filter(Frequency == 0) %>%
+    filter(Duration %in% c(50, 300)) %>%
+    filter(! str_detect(Intensity, pattern = "5$")) %>% # group 1 didn't have 5 steps at 10dB diff
+    filter(Intensity < 90 & Intensity > 10) # corrects for measuring differences between groups
     
   Tsc2.Rxn.BBN.aov = aov(Gaus ~ sex * Duration * genotype,
                          data = Tsc2.Rxn.BBN.aov.data)
@@ -214,7 +217,12 @@ Tsc2_Rxn_over_TH$Gaus = LambertW::Gaussianize(Tsc2_Rxn_over_TH$Rxn)[, 1]
   # summary(Tsc2.Rxn.BBN.aov)
   
   # Kruskal Testing - Main effects only 
-  lapply(c("genotype", "sex", "Duration"), 
+  lapply(c("genotype", "sex", "Duration", # Main effects
+           "interaction(genotype, sex)", 
+           "interaction(genotype, Duration)", 
+           "interaction(sex, Duration)",
+           "interaction(genotype, sex, Duration)"
+         ), 
          function(x) kruskal.test(reformulate(x, "Rxn"),
                                   data = filter(Tsc2.Rxn.BBN.aov.data))) %>% 
     # Convert to table
@@ -224,48 +232,141 @@ Tsc2_Rxn_over_TH$Gaus = LambertW::Gaussianize(Tsc2_Rxn_over_TH$Rxn)[, 1]
            sig = gtools::stars.pval(adj.p.value)) %>%
     select(method, parameter, statistic, data.name, adj.p.value, sig)
 
-  # # Post-Hoc Dunn's Test
-  # FSA::dunnTest(Rxn ~ interaction(Duration, genotype, sex), 
-  #                 data = filter(Tsc2.Rxn.BBN.aov.data, detail == "Alone"),
-  #                 method = "bonf") %>%
-  #   .$res %>%
-  #   as_tibble() %>%
-  #   select(-P.unadj) %>%
-  #   mutate(Sig = gtools::stars.pval(P.adj),
-  #          Comp1 = str_split_fixed(.$Comparison, ' - ', 2)[,1],
-  #          Comp2 = str_split_fixed(.$Comparison, ' - ', 2)[,2],
-  #          dur1 = str_split_fixed(Comp1, '\\.', 3)[,1] %>% as.numeric(),
-  #          geno1 = str_split_fixed(Comp1, '\\.', 3)[,2],
-  #          sex1 = str_split_fixed(Comp1, '\\.', 3)[,3],
-  #          dur2 = str_split_fixed(Comp2, '\\.', 3)[,1] %>% as.numeric(),
-  #          geno2 = str_split_fixed(Comp2, '\\.', 3)[,2],
-  #          sex2 = str_split_fixed(Comp2, '\\.', 3)[,3]) %>%
-  #   filter(dur1 == dur2) %>%
-  #   filter(! Sig %in% c(" ", ".")) %>%
-  #   arrange(dur1) %>%
-  #   select(-Comparison, -Comp1, -Comp2, -dur2) 
+  # Post-Hoc Dunn's Test
+  FSA::dunnTest(Rxn ~ interaction(Duration, genotype, sex),
+                  data = Tsc2.Rxn.BBN.aov.data,
+                  method = "bonf") %>%
+    .$res %>%
+    as_tibble() %>%
+    select(-P.unadj) %>%
+    mutate(Sig = gtools::stars.pval(P.adj),
+           Comp1 = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+           Comp2 = str_split_fixed(.$Comparison, ' - ', 2)[,2],
+           dur1 = str_split_fixed(Comp1, '\\.', 3)[,1] %>% as.numeric(),
+           geno1 = str_split_fixed(Comp1, '\\.', 3)[,2],
+           sex1 = str_split_fixed(Comp1, '\\.', 3)[,3],
+           dur2 = str_split_fixed(Comp2, '\\.', 3)[,1] %>% as.numeric(),
+           geno2 = str_split_fixed(Comp2, '\\.', 3)[,2],
+           sex2 = str_split_fixed(Comp2, '\\.', 3)[,3]) %>%
+    # only compare within a sex (sib-sib direct comparison)
+    filter(sex1 == sex2) %>%
+    filter(! Sig %in% c(" ", ".")) %>%
+    arrange(dur1) %>%
+    select(-Comparison, -Comp1, -Comp2)
   
+## 300ms only -----
+  Tsc2.Rxn.BBN50.aov.data = Tsc2_Rxn_over_TH %>%
+    filter(Frequency == 0) %>%
+    filter(Duration %in% c(50)) %>%
+    filter(! str_detect(Intensity, pattern = "5$")) %>% # group 1 didn't have 5 steps at 10dB diff
+    filter(Intensity < 90 & Intensity > 10) # corrects for measuring differences between groups
   
+  Tsc2.Rxn.BBN50.aov = aov(Gaus ~ sex * genotype,
+                            data = Tsc2.Rxn.BBN300.aov.data)
   
+  # Normality testing
+  Parametric_Check(Tsc2.Rxn.BBN50.aov)
   
+  # Not even close to normal
+  # summary(Tsc2.Rxn.BBN.aov)
   
+  # Kruskal Testing - Main effects only 
+  lapply(c("genotype", "sex", # Main effects
+           "interaction(genotype, sex)"
+  ), 
+  function(x) kruskal.test(reformulate(x, "Rxn"),
+                           data = filter(Tsc2.Rxn.BBN50.aov.data))) %>% 
+    # Convert to table
+    do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+    # do a p adjustment and then sig label
+    mutate(adj.p.value = p.adjust(p.value, "bonf"),
+           sig = gtools::stars.pval(adj.p.value)) %>%
+    select(method, parameter, statistic, data.name, adj.p.value, sig)
+  
+  # Post-Hoc Dunn's Test
+  FSA::dunnTest(Rxn ~ interaction(genotype, sex),
+                data = Tsc2.Rxn.BBN50.aov.data,
+                method = "bonf") %>%
+    .$res %>%
+    as_tibble() %>%
+    select(-P.unadj) %>%
+    mutate(Sig = gtools::stars.pval(P.adj),
+           Comp1 = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+           Comp2 = str_split_fixed(.$Comparison, ' - ', 2)[,2],
+           geno1 = str_split_fixed(Comp1, '\\.', 2)[,1],
+           sex1 = str_split_fixed(Comp1, '\\.', 2)[,2],
+           geno2 = str_split_fixed(Comp2, '\\.', 2)[,1],
+           sex2 = str_split_fixed(Comp2, '\\.', 2)[,2]) %>%
+    # only compare within a sex (sib-sib direct comparison)
+    # filter(sex1 == sex2) %>%
+    filter(! Sig %in% c(" ", ".")) %>%
+    select(-Comparison, -Comp1, -Comp2)
+
+## 300ms only -----
+  Tsc2.Rxn.BBN300.aov.data = Tsc2_Rxn_over_TH %>%
+    filter(Frequency == 0) %>%
+    filter(Duration %in% c(300)) %>%
+    filter(! str_detect(Intensity, pattern = "5$")) %>% # group 1 didn't have 5 steps at 10dB diff
+    filter(Intensity < 90 & Intensity > 10) # corrects for measuring differences between groups
+  
+  Tsc2.Rxn.300BBN.aov = aov(Gaus ~ sex * genotype,
+                         data = Tsc2.Rxn.BBN300.aov.data)
+  
+  # Normality testing
+  Parametric_Check(Tsc2.Rxn.300BBN.aov)
+  
+  # Not even close to normal
+  # summary(Tsc2.Rxn.BBN.aov)
+  
+  # Kruskal Testing - Main effects only 
+  lapply(c("genotype", "sex", # Main effects
+           "interaction(genotype, sex)"
+  ), 
+  function(x) kruskal.test(reformulate(x, "Rxn"),
+                           data = filter(Tsc2.Rxn.BBN300.aov.data))) %>% 
+    # Convert to table
+    do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+    # do a p adjustment and then sig label
+    mutate(adj.p.value = p.adjust(p.value, "bonf"),
+           sig = gtools::stars.pval(adj.p.value)) %>%
+    select(method, parameter, statistic, data.name, adj.p.value, sig)
+  
+  # Post-Hoc Dunn's Test
+  FSA::dunnTest(Rxn ~ interaction(genotype, sex),
+                data = Tsc2.Rxn.BBN300.aov.data,
+                method = "bonf") %>%
+    .$res %>%
+    as_tibble() %>%
+    select(-P.unadj) %>%
+    mutate(Sig = gtools::stars.pval(P.adj),
+           Comp1 = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+           Comp2 = str_split_fixed(.$Comparison, ' - ', 2)[,2],
+           geno1 = str_split_fixed(Comp1, '\\.', 2)[,1],
+           sex1 = str_split_fixed(Comp1, '\\.', 2)[,2],
+           geno2 = str_split_fixed(Comp2, '\\.', 2)[,1],
+           sex2 = str_split_fixed(Comp2, '\\.', 2)[,2]) %>%
+    # only compare within a sex (sib-sib direct comparison)
+    # filter(sex1 == sex2) %>%
+    filter(! Sig %in% c(" ", ".")) %>%
+    select(-Comparison, -Comp1, -Comp2)
+
 # Rxn Graphs --------------------------------------------------------------
-  
-single_Frequency = "BBN"
 
 Tsc_single_frequency_rxn_graph =   
   Rxn_table %>%
-    {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else .} %>%
     filter(line == "Tsc2-LE") %>%
-    filter(Duration %in% c(50, 100, 300)) %>%
-    # rename(Intensity = `Inten (dB)`) %>%
+    {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
     filter(detail %in% c("Alone", "Recheck")) %>%
-    mutate(group = if_else(rat_ID < 300, "Group 1", "Group 2")) %>%
-    # filter(rat_ID < 314) %>%
+    mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                             rat_ID < 300 ~ "Group 1",
+                             rat_ID >= 300 ~ "Group 2",
+                             .default = "Unknown")) %>%
+    filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+    filter(Duration %in% c(300, 50)) %>%
+    filter(Frequency == 0) %>%
     mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
     filter(! str_detect(Intensity, pattern = "5$")) %>%
     filter(Intensity < 90 & Intensity > 10) %>%
-    filter(Frequency == single_Frequency) %>%
     ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(group),
                color = genotype, group = interaction(Duration, group, genotype))) +
   ## Overall average lines
@@ -292,7 +393,7 @@ Tsc_single_frequency_rxn_graph =
          y = "Reaction time (ms, mean +/- SE)",
          color = "Genotype", linetype = "",
          caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats")) +
-    scale_linetype_manual(values = c("Group 1" = "solid", "Group 2" = "longdash")) +
+    scale_linetype_manual(values = c("Group 1" = "solid", "Group 2 Recheck" = "longdash")) +
     scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
     scale_x_continuous(breaks = seq(0, 90, by = 10)) +
     facet_wrap(~ Duration) +
@@ -313,13 +414,16 @@ print(Tsc_single_frequency_rxn_graph)
 
 Tsc_sex_differences_rxn_graph =   
   Rxn_table %>%
-  {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else .} %>%
   filter(line == "Tsc2-LE") %>%
-  filter(Duration %in% c(50, 100, 300)) %>%
-  # rename(Intensity = `Inten (dB)`) %>%
+  {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
   filter(detail %in% c("Alone", "Recheck")) %>%
-  mutate(group = if_else(rat_ID < 300, "Group 1", "Group 2")) %>%
-  # filter(rat_ID < 314) %>%
+  mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                           rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 ~ "Group 2",
+                           .default = "Unknown")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+  filter(Duration %in% c(300, 50)) %>%
+  filter(Frequency == 0) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
   filter(! str_detect(Intensity, pattern = "5$")) %>%
   filter(Intensity < 90 & Intensity > 10) %>%
@@ -349,11 +453,11 @@ Tsc_sex_differences_rxn_graph =
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
        color = "Genotype", linetype = "",
-       caption = if_else(drop_seizure_rats, "Without Het F TP3", "With TP3")) +
+       caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats")) +
   # scale_linetype_manual(values = c("Group 1" = "solid", "Group 2" = "longdash")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
-  # facet_wrap(~ Duration) +
+  facet_wrap(~ Duration) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
@@ -362,6 +466,95 @@ Tsc_sex_differences_rxn_graph =
 
 print(Tsc_sex_differences_rxn_graph)
 
+## Sex diff: individual females on graph ----
+
+Rxn_table %>%
+  filter(line == "Tsc2-LE") %>%
+  {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
+  filter(detail %in% c("Alone", "Recheck")) %>%
+  mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                           rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 ~ "Group 2",
+                           .default = "Unknown")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+  filter(Duration %in% c(300, 50)) %>%
+  filter(sex == "Female") %>%
+  filter(Frequency == 0) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
+  filter(! str_detect(Intensity, pattern = "5$")) %>%
+  filter(Intensity < 90 & Intensity > 10) %>%
+  filter(Frequency == "BBN") %>%
+  ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(sex),
+             color = genotype, group = interaction(sex, genotype))) +
+  ## Individuals
+  # geom_line(aes(group = rat_ID), alpha = 0.5) +
+  # geom_dl(aes(label = rat_name), method = list(dl.combine("last.points"), cex = 0.8),
+  #         hjust = 3) +
+  ## Lines for each group
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1.5, position = position_dodge(1)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(1), size = 3) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "line", position = position_dodge(1)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "",
+       caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats")) +
+  # scale_linetype_manual(values = c("Group 1" = "solid", "Group 2" = "longdash")) +
+  scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(~ Duration) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
+
+## Sex diff: individual males on graph ----
+
+Rxn_table %>%
+  filter(line == "Tsc2-LE") %>%
+  {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
+  filter(detail %in% c("Alone", "Recheck")) %>%
+  mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                           rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 ~ "Group 2",
+                           .default = "Unknown")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+  filter(Duration %in% c(300, 50)) %>%
+  filter(sex == "Male") %>%
+  filter(Frequency == 0) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
+  filter(! str_detect(Intensity, pattern = "5$")) %>%
+  filter(Intensity < 90 & Intensity > 10) %>%
+  filter(Frequency == "BBN") %>%
+  ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(sex),
+             color = genotype, group = interaction(sex, genotype))) +
+  ## Lines for each group
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1.5, position = position_dodge(1)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(1), size = 3) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "line", position = position_dodge(1)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "",
+       caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats")) +
+  # scale_linetype_manual(values = c("Group 1" = "solid", "Group 2" = "longdash")) +
+  scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(~ Duration) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
 
 # Individual Graphs -------------------------------------------------------
 
