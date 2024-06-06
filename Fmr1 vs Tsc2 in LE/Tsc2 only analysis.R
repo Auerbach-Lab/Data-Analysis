@@ -100,6 +100,7 @@ Tsc2_TH_averages %>%
 
 # TH Graph ----------------------------------------------------------------
 
+## Threshold by group -----
 Tsc2_TH_gaph = 
   TH_table %>%
   filter(line == "Tsc2-LE") %>%
@@ -133,6 +134,7 @@ Tsc2_TH_gaph =
 
 print(Tsc2_TH_gaph)
 
+## Overall Threshold ----
 Tsc2_TH_overview_gaph = 
   TH_table %>%
   filter(line == "Tsc2-LE") %>%
@@ -170,8 +172,8 @@ Tsc2_TH_overview_gaph =
 print(Tsc2_TH_overview_gaph)
 
 # Rxn analysis ------------------------------------------------------------
-# Get data
-Tsc2_Rxn_over_TH = Rxn_table_over_TH %>%
+## Get data ----
+Tsc2_Rxn_over_TH = Rxn_table %>%
   filter(line == "Tsc2-LE") %>%
   {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
   filter(detail %in% c("Alone", "Recheck")) %>%
@@ -201,7 +203,7 @@ Tsc2_Rxn_over_TH$Gaus = LambertW::Gaussianize(Tsc2_Rxn_over_TH$Rxn)[, 1]
 ## BBN Model ----
   Tsc2.Rxn.BBN.aov.data = Tsc2_Rxn_over_TH %>%
     filter(Frequency == 0)
-  
+    
   Tsc2.Rxn.BBN.aov = aov(Gaus ~ sex * Duration * genotype,
                          data = Tsc2.Rxn.BBN.aov.data)
   
@@ -242,13 +244,13 @@ Tsc2_Rxn_over_TH$Gaus = LambertW::Gaussianize(Tsc2_Rxn_over_TH$Rxn)[, 1]
   #   filter(! Sig %in% c(" ", ".")) %>%
   #   arrange(dur1) %>%
   #   select(-Comparison, -Comp1, -Comp2, -dur2) 
-    
   
-
-
-
+  
+  
+  
+  
 # Rxn Graphs --------------------------------------------------------------
-
+  
 single_Frequency = "BBN"
 
 Tsc_single_frequency_rxn_graph =   
