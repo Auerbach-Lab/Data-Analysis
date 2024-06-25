@@ -10,7 +10,8 @@ FA_cutoff = .40
 # Load Packages -----------------------------------------------------------
 
 # data manipulation
-library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(forcats)
+library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); 
+library(purrr); library(forcats); library(glue); library(data.table)
 
 # analysis & visualization
 library(ggplot2); library(nortest)
@@ -18,10 +19,16 @@ library(ggplot2); library(nortest)
 
 
 # Load Necessary Datasets -------------------------------------------------
+cat("Loading data...")
 load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
+rat_decoder = fread(glue("{projects_folder}/rat_archive.csv"),
+                    select = c("Rat_ID", "DOB", "Sex", "Genotype", "HL_date"))
+cat("done.\n")
 
 # # Individual Trial Data
 # load(paste0(projects_folder, "Oddball-LE_archive.Rdata"), .GlobalEnv)
+
+cat("Filtering...")
 
 # Remove bad data
 #TODO: deal with multiple runs in a day
@@ -35,35 +42,69 @@ dataset = run_archive %>%
 
 # Get core data -----------------------------------------------------------
 
-core_columns = c("date", "rat_name", "rat_ID", 
-                 "file_name", "experiment", "phase", "task", "detail", 
-                 "stim_type", "analysis_type", "block_size", "complete_block_count", 
-                 "dprime", "reaction", "FA_percent")
-
 core_data = dataset %>% 
   # Get essential columns in usable form; expands the dataframe
   unnest_wider(assignment) %>% unnest_wider(stats) %>%
-  select(all_of(core_columns)) %>%
   # Only keep relevant Experiments
   filter(experiment %in% c("Oddball")) %>%
-  mutate(task = str_replace_all(task, "CNO \\(3mg/kg\\)", "CNO 3mg/kg"))
+  mutate(task = str_replace_all(task, "CNO \\(3mg/kg\\)", "CNO 3mg/kg")) %>%
+  mutate(go = str_extract(file_name, pattern = "^[:digit:]+") %>% as.numeric(), # Get go frequency by extracting 1st (^) number ([:digit:]+) from file_name
+         no_go = str_extract(file_name, pattern = "(?<=_)(BBN|[:digit:]+kHz)(?=_)")) %>% # Get No go frequency by extracting either BBN or the 2nd kHz ([:digit:]+) from file_name
+  mutate(Freq_pair = case_when(phase == "Tone-BBN" ~ paste(task, go),
+                               phase == "Tone-Tone" ~ glue("{task} {go}-{no_go}"),
+                               .default = glue("unknown phase: {task} {go}-{no_go}"))) %>%
+  left_join(rat_decoder, by = c("rat_ID" = "Rat_ID"))
 
+
+
+# Descriptive Stats -------------------------------------------------------
+
+cat("summerizing...")
+
+Summary_table = core_data %>%
+  # Omit Training & Reset days
+  dplyr::filter(! task %in% c("Training", "Reset")) %>%
+  # # Omit days with > 45% FA, i.e. guessing
+  # filter(FA_percent < FA_cutoff) %>%
+  reframe(trials = mean(trial_count, na.rm = T), 
+          blocks = mean(complete_block_count, na.rm = T),
+          hit = mean(hit_percent, na.rm = T) * 100, 
+          FA = mean(FA_percent, na.rm = T) * 100,
+          .by = c(rat_ID, rat_name, Genotype, task, phase, go, no_go))
 
 # Get Reaction times by rat -----------------------------------------------
 
-Rxn_table = core_data %>%
+cat("getting reaction times...")
+
+
+core_columns = c("date", "rat_name", "rat_ID", "Genotype", 
+                 "file_name", "experiment", "phase", "task", "detail", 
+                 "stim_type", "analysis_type", 
+                 "reaction", "FA_percent", "go", "no_go")
+
+Rxn = core_data %>%
+  select(all_of(core_columns)) %>%
   # Omit Training & Reset days
   dplyr::filter(! task %in% c("Training", "Reset")) %>%
   # Omit days with > 45% FA, i.e. guessing
-  filter(FA_percent < FA_cutoff) %>%
+  # filter(FA_percent < FA_cutoff) %>%
   # Get Reaction times:
   unnest(reaction) %>%
-  # Use rat_ID because its sure to be unquie
-  group_by(rat_ID, task, `Inten (dB)`) %>%
+  rename(Position = `Inten (dB)`)
+
+Rxn_table = Rxn %>%
+  # Use rat_ID because its sure to be unique
+  group_by(rat_ID, rat_name, Genotype, task, phase, Position) %>%
   # Get Averages
   transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>% 
-  unique() %>%
-  rename(Position = `Inten (dB)`)
+  unique()
+
+Rxn_Tone_On_Tone = Rxn %>%
+  # Use rat_ID because its sure to be unique
+  group_by(rat_ID, rat_name, Genotype, task, phase, go, no_go, Position) %>%
+  # Get Averages
+  transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>% 
+  unique() 
 
 
 # Rxn analysis ------------------------------------------------------------
