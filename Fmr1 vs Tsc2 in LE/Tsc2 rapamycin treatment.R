@@ -67,7 +67,7 @@ vehicle_check_rxn %>%
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
        color = "Genotype", linetype = "") +
-  # scale_linetype_manual(values = c("Recheck" = "solid", "Vehicle (Tween 80)" = "longdash")) +
+  scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", "Rapamycin (6mg/kg)" = "solid")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
   theme_classic() +
@@ -106,6 +106,7 @@ Rap_rxn =
 Rap_rxn %>%
   # filter(! str_detect(`Inten (dB)`, pattern = "5$")) %>%
   filter(`Inten (dB)` > 15) %>%
+  # filter(rat_name != "Orange1") %>%
   ggplot(aes(x = `Inten (dB)`, y = Rxn, linetype = as.factor(detail),
              color = genotype, group = interaction(detail, genotype))) +
   stat_summary(fun = function(x) mean(x, na.rm = TRUE),
@@ -119,7 +120,7 @@ Rap_rxn %>%
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
        color = "Genotype", linetype = "") +
-  # scale_linetype_manual(values = c("Recheck" = "solid", "Vehicle (Tween 80)" = "longdash")) +
+  scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", "Rapamycin (6mg/kg)" = "solid")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
   theme_classic() +
@@ -127,3 +128,74 @@ Rap_rxn %>%
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   ) 
+
+
+# WT graph ----------------------------------------------------------------
+core_data %>%
+  filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
+  filter(genotype == "WT") %>%
+  filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
+  filter(detail %in% c("Recheck", "Rapamycin (6mg/kg)", "Vehicle (Tween 80)")) %>%
+  filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
+  unnest(reaction) %>% 
+  reframe(Rxn = mean(Rxn, na.rm = TRUE) * 1000,
+          .by = c(rat_ID, rat_name, sex, genotype, line, 
+                  detail, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`)) %>%
+  filter(`Inten (dB)` > 15) %>%
+  ggplot(aes(x = `Inten (dB)`, y = Rxn, linetype = as.factor(detail),
+             color = genotype, group = interaction(detail, genotype))) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1, position = position_dodge(0.5)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(0.5)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "line", position = position_dodge(0.5)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "") +
+  scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", "Rapamycin (6mg/kg)" = "solid")) +
+  scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
+
+
+# Het graph ---------------------------------------------------------------
+core_data %>%
+  filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
+  filter(genotype == "Het") %>%
+  filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
+  filter(detail %in% c("Recheck", "Rapamycin (6mg/kg)", "Vehicle (Tween 80)")) %>%
+  filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
+  unnest(reaction) %>% 
+  reframe(Rxn = mean(Rxn, na.rm = TRUE) * 1000,
+          .by = c(rat_ID, rat_name, sex, genotype, line, 
+                  detail, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`)) %>%
+  filter(`Inten (dB)` > 15) %>%
+  ggplot(aes(x = `Inten (dB)`, y = Rxn, linetype = as.factor(detail),
+             color = genotype, group = interaction(detail, genotype))) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1, position = position_dodge(0.5)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(0.5)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "line", position = position_dodge(0.5)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "") +
+  scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", "Rapamycin (6mg/kg)" = "solid")) +
+  scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
+
