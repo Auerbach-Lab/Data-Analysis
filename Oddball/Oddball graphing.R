@@ -56,9 +56,10 @@ Rxn_Tone_On_Tone %>%
 # Base case by genotype ---------------------------------------------------
 
 Rxn_table %>%
-  filter(task %in% c("Base case")) %>%
-  filter(Position %in% c(4, 5, 6)) %>%
-  ggplot(aes(x = Position, y = Rxn, color = Genotype)) +
+  filter(task %in% c("Base case", "Rotating") & detail %in% c("4-6", "Round 1")) %>%
+  filter(rat_ID > 300) %>%
+  filter(str_detect(Genotype, pattern = "Fmr1")) %>%
+  ggplot(aes(x = Position, y = Rxn_diff, color = Genotype)) +
   stat_summary(fun = mean,
                fun.min = function(x) mean(x) - se(x),
                fun.max = function(x) mean(x) + se(x),
