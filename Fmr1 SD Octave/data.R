@@ -318,6 +318,12 @@ training_days_data =
   summarise(days = n(), Genotype = unique(Genotype),
             .by = c(rat_ID, detail))
 
+summarise(training_days_data,
+          Days_average = mean(days, na.rm = TRUE),
+          SD = sd(days, na.rm = TRUE),
+          SE = FSA::se(days, na.rm = TRUE),
+          .by = c(Genotype, detail))
+
 training_days_data$Gaus = LambertW::Gaussianize(training_days_data$days)[, 1]
 
 Taining_days.aov = aov(days ~ Genotype * detail, data = training_days_data)
@@ -349,7 +355,7 @@ training_days_data %>%
   scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
   scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
   labs(x = "",
-       y = "Threshold (octave step)",
+       y = "Days to criterion",
        fill = "Genotype") +
   facet_wrap(~ detail) +
   theme_classic() +
