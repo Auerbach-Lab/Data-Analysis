@@ -72,6 +72,20 @@ Summary_table = core_data %>%
           FA = mean(FA_percent, na.rm = T) * 100,
           .by = c(rat_ID, rat_name, Genotype, task, phase, go, no_go))
 
+# Probe FA count ----------------------------------------------------------
+
+Probe_count = core_data %>%
+  # Omit Training & Reset days
+  dplyr::filter(task %in% c("Probe trials")) %>%
+  unnest(FA_detailed) %>%
+  # # Omit days with > 45% FA, i.e. guessing
+  # filter(FA_percent < FA_cutoff) %>%
+  reframe(FA_count = sum(FA, na.rm = T),
+          Probe_count = sum(trials, na.rm = T),
+          Freq = unique(go) %>% sort() %>% str_flatten_comma(),
+          .by = c(rat_ID, rat_name, Genotype, task, phase, detail, position))
+
+
 # Get Reaction times by rat -----------------------------------------------
 
 cat("getting reaction times...")
