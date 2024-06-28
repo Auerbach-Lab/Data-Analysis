@@ -108,17 +108,26 @@ Rxn = core_data %>%
 
 Rxn_table = Rxn %>%
   # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, Genotype, task, phase, Position) %>%
+  group_by(rat_ID, rat_name, Genotype, task, detail, phase, Position) %>%
   # Get Averages
   transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>% 
-  unique()
+  unique() %>%
+  group_by(rat_ID, rat_name, Genotype, task, detail, phase) %>%
+  do(mutate(., Rxn_norm = Rxn/filter(., Position == min(Position))$Rxn,
+            Rxn_diff = Rxn - filter(., Position == min(Position))$Rxn)) %>%
+  ungroup
+
 
 Rxn_Tone_On_Tone = Rxn %>%
   # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, Genotype, task, phase, go, no_go, Position) %>%
+  group_by(rat_ID, rat_name, Genotype, task, detail, phase, go, no_go, Position) %>%
   # Get Averages
   transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>% 
-  unique() 
+  unique()  %>%
+  group_by(rat_ID, rat_name, Genotype, task, detail, phase, go, no_go) %>%
+  do(mutate(., Rxn_norm = Rxn/filter(., Position == min(Position))$Rxn,
+            Rxn_diff = Rxn - filter(., Position == min(Position))$Rxn)) %>%
+  ungroup
 
 
 # Rxn analysis ------------------------------------------------------------
