@@ -9,7 +9,7 @@
 Tsc2_rapamycin_treated_rats = 
   core_data %>%
   filter(line == "Tsc2-LE") %>% # only Tsc2 rats are being treated so this speeds up
-  filter(detail %in% c("Vehicle (Tween 80)", "Rapamycin (6mg/kg)")) %>% # treatment or control condition, to select for rats with both add filter(all(conditions))
+  filter(detail %in% c("Vehicle (Tween 80)", "Rapamycin (6mg/kg)", "Post Treatment")) %>% # treatment or control condition, to select for rats with both add filter(all(conditions))
   .$rat_ID %>% # use rat_ID because its unique
   unique # de-duplicate
   
@@ -81,16 +81,18 @@ vehicle_check_rxn %>%
 TH_table %>%
   filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
   filter(Duration == 50) %>%
-  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)")) %>%
+  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Recheck", "Post Treatment")) %>%
   reframe(TH = mean(TH, na.rm = TRUE),
           .by = c(genotype, detail)) %>%
   arrange(genotype, detail)
 
+
+## Rxn data set -----
 Rap_rxn =
   core_data %>%
   filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
   filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
-  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)")) %>%
+  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Recheck", "Post Treatment")) %>%
   filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
   left_join(Tsc2_treatment_dates %>% 
               filter(detail == "Vehicle (Tween 80)") %>% 
@@ -100,13 +102,15 @@ Rap_rxn =
   filter(date > start_date) %>%
   unnest(reaction) %>% 
   reframe(Rxn = mean(Rxn, na.rm = TRUE) * 1000,
-          .by = c(rat_ID, rat_name, sex, genotype, line, detail, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`))
+          .by = c(rat_ID, rat_name, sex, genotype, line, detail,
+                  `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`)) %>%
+  mutate(detail = ordered(detail, levels = c("Recheck", "Vehicle (Tween 80)", "Rapamycin (6mg/kg)", "Post Treatment")))
 
 ## Rxn Graph ====
 Rap_rxn %>%
+  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)")) %>%
   # filter(! str_detect(`Inten (dB)`, pattern = "5$")) %>%
   filter(`Inten (dB)` > 15) %>%
-  # filter(rat_name != "Orange1") %>%
   ggplot(aes(x = `Inten (dB)`, y = Rxn, linetype = as.factor(detail),
              color = genotype, group = interaction(detail, genotype))) +
   stat_summary(fun = function(x) mean(x, na.rm = TRUE),
@@ -119,28 +123,22 @@ Rap_rxn %>%
                geom = "line", position = position_dodge(0.5)) +
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
-       color = "Genotype", linetype = "") +
-  scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", "Rapamycin (6mg/kg)" = "solid")) +
+       color = "Genotype", linetype = "Treatment") +
+  scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", 
+                                   "Rapamycin (6mg/kg)" = "solid", "Post Treatment" = "dotdash")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
-    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    legend.position = c(.9,.85)
   ) 
 
 
 # WT graph ----------------------------------------------------------------
-core_data %>%
-  filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
+Rap_rxn %>%
   filter(genotype == "WT") %>%
-  filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
-  filter(detail %in% c("Recheck", "Rapamycin (6mg/kg)", "Vehicle (Tween 80)")) %>%
-  filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
-  unnest(reaction) %>% 
-  reframe(Rxn = mean(Rxn, na.rm = TRUE) * 1000,
-          .by = c(rat_ID, rat_name, sex, genotype, line, 
-                  detail, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`)) %>%
   filter(`Inten (dB)` > 15) %>%
   ggplot(aes(x = `Inten (dB)`, y = Rxn, linetype = as.factor(detail),
              color = genotype, group = interaction(detail, genotype))) +
@@ -154,28 +152,24 @@ core_data %>%
                geom = "line", position = position_dodge(0.5)) +
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
-       color = "Genotype", linetype = "") +
-  scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", "Rapamycin (6mg/kg)" = "solid")) +
+       # title = glue("Wildtype"),
+       color = "Genotype", linetype = "Treatment") +
+  scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", 
+                                   "Rapamycin (6mg/kg)" = "solid", "Post Treatment" = "dotdash")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(~ sex) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
-    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    legend.position = c(.9,.85)
   ) 
 
 
 # Het graph ---------------------------------------------------------------
-core_data %>%
-  filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
+Rap_rxn %>%
   filter(genotype == "Het") %>%
-  filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
-  filter(detail %in% c("Recheck", "Rapamycin (6mg/kg)", "Vehicle (Tween 80)")) %>%
-  filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
-  unnest(reaction) %>% 
-  reframe(Rxn = mean(Rxn, na.rm = TRUE) * 1000,
-          .by = c(rat_ID, rat_name, sex, genotype, line, 
-                  detail, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`)) %>%
   filter(`Inten (dB)` > 15) %>%
   ggplot(aes(x = `Inten (dB)`, y = Rxn, linetype = as.factor(detail),
              color = genotype, group = interaction(detail, genotype))) +
@@ -189,13 +183,59 @@ core_data %>%
                geom = "line", position = position_dodge(0.5)) +
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
-       color = "Genotype", linetype = "") +
-  scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", "Rapamycin (6mg/kg)" = "solid")) +
+       color = "Genotype", linetype = "Treatment") +
+  scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", 
+                                   "Rapamycin (6mg/kg)" = "solid", "Post Treatment" = "dotdash")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(~ sex) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
-    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    legend.position = c(.9,.85)
   ) 
 
+# Individual Graphs -------------------------------------------------------
+
+Individual_Graphs = 
+  core_data %>%
+  filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
+  filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
+  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Recheck", "Post Treatment")) %>%
+  filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
+  unnest(reaction) %>% 
+  filter(`Inten (dB)` >= 20) %>%
+  mutate(name = rat_name,
+         detail = ordered(detail, levels = c("Recheck", "Vehicle (Tween 80)", "Rapamycin (6mg/kg)", "Post Treatment"))) %>%
+  group_by(rat_ID, name) %>%
+  do(single_rat_graph = 
+       ggplot(data = .,
+              aes(x = `Inten (dB)`, y = Rxn * 1000, color = detail)) +
+       stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+                    fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+                    fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+                    geom = "errorbar", position = position_dodge(0.5), width = 0) +
+       stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+                    geom = "point", position = position_dodge(0.5), size = 3) +
+       stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+                    geom = "line", position = position_dodge(0.5)) +
+       labs(x = "Intensity (dB)",
+            y = "Reaction time (ms, mean +/- SE)",
+            color = "Treatment",
+            title = glue("{unique(.$rat_name)} ({unique(.$genotype)})")) +
+       scale_color_manual(values = c("Recheck" = "black", 
+                                     "Vehicle (Tween 80)" = "darkblue", 
+                                     "Rapamycin (6mg/kg)" = "red",
+                                     "Post Treatment" = "goldenrod")) +
+       scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+       theme_classic() +
+       theme(
+         plot.title = element_text(hjust = 0.5),
+         panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+         legend.position = c(.9,.85)
+       )
+  ) %>%
+  arrange(name)
+
+Individual_Graphs$single_rat_graph
