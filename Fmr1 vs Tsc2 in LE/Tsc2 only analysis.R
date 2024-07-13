@@ -27,6 +27,18 @@ Parametric_Check <- function(AOV.data) {
 }
 
 
+# N -----------------------------------------------------------------------
+
+TH_table %>%
+  filter(line == "Tsc2-LE") %>%
+  select(1:5) %>%
+  unique() %>%
+  mutate(group = case_when(rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 ~ "Group 2",
+                           .default = "Unknown")) %>%
+  summarise(n = n(), .by = c(genotype, sex, group))
+
+
 # TH analysis -------------------------------------------------------------
 # note that for Tukey everything needs to be a factor and Duration (a number
 # value) tries to make itself continuous
