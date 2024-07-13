@@ -33,9 +33,10 @@ ggsave(filename = "Rxn with CNO.jpg",
 # Frequencies ---------------------------------------------------
 
 Rxn_Tone_On_Tone %>%
+  filter(rat_ID %in% Tone_on_Tone_rats) %>%
   filter(task %in% c("Base case")) %>%
-  filter(Position %in% c(4, 5, 6)) %>%
-  ggplot(aes(x = Position, y = Rxn, color = as.factor(no_go))) +
+  mutate(no_go = as.factor(no_go)) %>%
+  ggplot(aes(x = Position, y = Rxn_diff, shape = detail, color = no_go)) +
   # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
   stat_summary(fun = mean,
                fun.min = function(x) mean(x) - se(x),
@@ -52,21 +53,47 @@ Rxn_Tone_On_Tone %>%
     panel.grid.major.x = element_line(color = "white")
   )
 
+## Individual graphs -----
+individual_graphs = Rxn_Tone_On_Tone %>%
+  filter(rat_ID %in% Tone_on_Tone_rats) %>%
+  filter(task %in% c("Base case")) %>% group_by(rat_ID) %>%
+  mutate(no_go = as.factor(no_go)) %>%
+  do(
+    plot = ggplot(., aes(x = Position, y = Rxn_diff, shape = detail, color = no_go)) +
+      # geom_point(aes(group = ID, color = Genotype), alpha = 0.3)+
+      stat_summary(fun = mean,
+                   fun.min = function(x) mean(x) - se(x),
+                   fun.max = function(x) mean(x) + se(x),
+                   geom = "errorbar", width = 0, position = position_dodge(0.1)) +
+      stat_summary(fun = mean,
+                   geom = "point", position = position_dodge(0.1), size = 3) +
+      stat_summary(fun = mean, geom = "line", position = position_dodge(0.1))  +
+      scale_color_manual(values = c("BBN" = "black", "6kHz" = "red", "12kHz" = "blue", "24kHz" = "green")) +
+      facet_wrap(~ go) +
+      theme_classic() +
+      theme(
+        plot.title = element_text(hjust = 0.5),
+        panel.grid.major.x = element_line(color = "white")
+      )
+  )
+
+individual_graphs$plot
 
 # Base case by genotype ---------------------------------------------------
 
 Rxn_table %>%
-  filter(task %in% c("Base case", "Rotating") & detail %in% c("4-6", "Round 1")) %>%
-  filter(rat_ID > 300) %>%
   filter(str_detect(Genotype, pattern = "Fmr1")) %>%
+  filter(task %in% c("Base case", "Rotating") & detail %in% c("4-6", "Round 1")) %>%
+  # filter(rat_ID < 300) %>%
   ggplot(aes(x = Position, y = Rxn_diff, color = Genotype)) +
   stat_summary(fun = mean,
                fun.min = function(x) mean(x) - se(x),
                fun.max = function(x) mean(x) + se(x),
-               geom = "errorbar", width = 0, position = position_dodge(0.1)) +
+               geom = "errorbar", width = 0, position = position_dodge(0.03)) +
   stat_summary(fun = mean,
-               geom = "point", position = position_dodge(0.1), size = 3) +
-  stat_summary(fun = mean, geom = "line", position = position_dodge(0.1), linewidth = 1)  +
+               geom = "point", position = position_dodge(0.03), size = 3) +
+  stat_summary(fun = mean, geom = "line", position = position_dodge(0.03), linewidth = 1)  +
+  scale_x_continuous(breaks = seq(1:10)) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),

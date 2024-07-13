@@ -14,7 +14,7 @@ library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stri
 library(purrr); library(forcats); library(glue); library(data.table)
 
 # analysis & visualization
-library(ggplot2); library(nortest)
+library(ggplot2); library(nortest); library(FSA)
 
 
 
@@ -55,6 +55,7 @@ core_data = dataset %>%
                                .default = glue("unknown phase: {task} {go}-{no_go}"))) %>%
   left_join(rat_decoder, by = c("rat_ID" = "Rat_ID"))
 
+Tone_on_Tone_rats = filter(core_data, phase == "Tone-Tone")$rat_ID %>% unique
 
 
 # Descriptive Stats -------------------------------------------------------
@@ -72,6 +73,17 @@ Summary_table = core_data %>%
           FA = mean(FA_percent, na.rm = T) * 100,
           .by = c(rat_ID, rat_name, Genotype, task, phase, go, no_go))
 
+# Tone-Tone Summary -------------------------------------------------------
+Summary_table %>%
+  filter(rat_ID > 300) %>%
+  filter(task == "Base case") %>%
+  reframe(trials = mean(trials, na.rm = T), 
+          blocks = mean(blocks, na.rm = T),
+          hit = mean(hit, na.rm = T) %>% round(digits = 0), 
+          FA = mean(FA, na.rm = T) %>% round(digits = 0),
+          .by = c(task, phase, go, no_go)) %>%
+  View
+
 # Probe FA count ----------------------------------------------------------
 
 Probe_count = core_data %>%
@@ -82,8 +94,11 @@ Probe_count = core_data %>%
   # filter(FA_percent < FA_cutoff) %>%
   reframe(FA_count = sum(FA, na.rm = T),
           Probe_count = sum(trials, na.rm = T),
-          Freq = unique(go) %>% sort() %>% str_flatten_comma(),
-          .by = c(rat_ID, rat_name, Genotype, task, phase, detail, position))
+          # Freq = unique(go) %>% sort() %>% str_flatten_comma(),
+          .by = c(rat_ID, rat_name, Genotype, task, phase, detail, go, position)) %>%
+  arrange(rat_ID, go, position)
+
+filter(Probe_count, rat_ID > 300) %>% View
 
 
 # Get Reaction times by rat -----------------------------------------------
