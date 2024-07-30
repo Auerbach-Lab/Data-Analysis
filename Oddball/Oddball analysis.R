@@ -118,7 +118,7 @@ filter(Probe_count, rat_ID > 300) %>% View
 cat("getting reaction times...")
 
 
-core_columns = c("date", "rat_name", "rat_ID", "Genotype", 
+core_columns = c("date", "rat_name", "rat_ID", "Sex", "Genotype", 
                  "file_name", "experiment", "phase", "task", "detail", 
                  "stim_type", "analysis_type", 
                  "reaction", "FA_percent", "go", "no_go")
@@ -135,11 +135,11 @@ Rxn = core_data %>%
 
 Rxn_table = Rxn %>%
   # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, Genotype, task, detail, phase, Position) %>%
+  group_by(rat_ID, rat_name, Sex, Genotype, task, detail, phase, Position) %>%
   # Get Averages
   transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>% 
   unique() %>%
-  group_by(rat_ID, rat_name, Genotype, task, detail, phase) %>%
+  group_by(rat_ID, rat_name, Sex, Genotype, task, detail, phase) %>%
   do(mutate(., Rxn_norm = Rxn/filter(., Position == min(Position))$Rxn,
             Rxn_diff = Rxn - filter(., Position == min(Position))$Rxn)) %>%
   ungroup
@@ -147,11 +147,11 @@ Rxn_table = Rxn %>%
 
 Rxn_Tone_On_Tone = Rxn %>%
   # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, Genotype, task, detail, phase, go, no_go, Position) %>%
+  group_by(rat_ID, rat_name, Sex, Genotype, task, detail, phase, go, no_go, Position) %>%
   # Get Averages
   transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>% 
   unique()  %>%
-  group_by(rat_ID, rat_name, Genotype, task, detail, phase, go, no_go) %>%
+  group_by(rat_ID, rat_name, Sex, Genotype, task, detail, phase, go, no_go) %>%
   do(mutate(., Rxn_norm = Rxn/filter(., Position == min(Position))$Rxn,
             Rxn_diff = Rxn - filter(., Position == min(Position))$Rxn)) %>%
   ungroup
