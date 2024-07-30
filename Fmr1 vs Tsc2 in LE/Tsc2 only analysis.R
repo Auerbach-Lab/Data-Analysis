@@ -169,7 +169,7 @@ Tsc2_TH_overview_gaph =
                  position = position_dodge(1), vjust = 2, size = 3) +
     # scale_color_manual(values = c("Tsc2-LE" = "darkblue", "Fmr1-LE" = "red")) +
     scale_color_manual(values = c("Male" = "blue", "Female" = "coral")) +
-    scale_fill_manual(values = c("WT" = "grey40", "Het" = "deepskyblue", "KO" = "lightcoral")) +
+    scale_fill_manual(values = c("WT" = "darkgrey", "Het" = "deepskyblue", "KO" = "lightcoral")) +
     labs(x = "",
          y = "Threshold (dB, mean +/- SE)",
          caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats"),
@@ -182,6 +182,43 @@ Tsc2_TH_overview_gaph =
     )
 
 print(Tsc2_TH_overview_gaph)
+
+## Threshold by group/sex ---
+TH_table %>%
+  filter(line == "Tsc2-LE") %>%
+  filter(Frequency == 0) %>%
+  filter(! detail %in% c("Mixed", "Rotating")) %>%
+  filter(Duration %in% c(300)) %>%
+  mutate(group = case_when(detail == "Recheck" ~ "Group 2",
+                           rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 ~ "Group 2 bad original",
+                           .default = "Unknown"),
+         Duration = factor(Duration, levels = c(50, 100, 300), ordered = TRUE)) %>%
+  filter(group %in% c("Group 1", "Group 2")) %>%
+  ggplot(aes(x = genotype, y = TH, fill = genotype)) +
+  geom_boxplot(linewidth = 1, width = 0.8) +
+  # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
+  # stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
+  #              position = position_dodge(1), vjust = 2, size = 3) +
+  labs(x = "",
+       y = "Threshold (dB)",
+       fill = "Genotype") +
+  scale_y_continuous(limits = c(19, 31), breaks = c(seq(18, 32, 2))) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "Het" = "deepskyblue", "KO" = "red")) +
+  facet_wrap(~ sex) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    legend.text = element_text(size = 14, colour = "black"),
+    legend.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 14, colour = "black"),
+    axis.title = element_text(size = 18, face = "bold"),
+    panel.spacing = unit(0, "lines"),
+    panel.border = element_rect(color = "black", fill = NA, size = 1),
+    strip.text = element_text(size = 18, face = "bold"),
+    panel.grid.major.y = element_line(color = rgb(225, 225, 225, 255,
+                                                  maxColorValue = 255))
+  )
 
 # Rxn analysis ------------------------------------------------------------
 ## Get data ----
