@@ -127,33 +127,21 @@ hit_percent_by_BG.aov =
 
 filter(hit_percent_by_BG.aov, sig != " ")
 
-# TODO: FIX as not working
 # Non-Parametric Post Hoc:
-hit_percent_by_BG.aov.postHoc = 
-  hit_percent_by_BG.aov.data %>% 
+hit_percent_by_BG.aov.postHoc =
+  hit_percent_by_BG.aov.data %>%
+  group_by(BG) %>%
+  do(FSA::dunnTest(.$hit_percent, .$HL_state, method = "none")$res) %>%
+  mutate(HL_state = NA) %>%
+  relocate(HL_state, .after = BG) %>%
+  bind_rows(hit_percent_by_BG.aov.data %>%
+              group_by(HL_state) %>%
+              do(FSA::dunnTest(.$hit_percent, .$BG, method = "none")$res)) %>%
+  mutate(P.adj = p.adjust(P.unadj, "BH"),
+         sig = stars.pval(P.adj))
   
 
 filter(hit_percent_by_BG.aov.postHoc, sig != " ")
-
-hit_percent_by_BG.aov.postHoc =
-  hit_percent_by_BG.aov.data %>%
-    group_by(BG) %>%
-    summarise(dunns = tryCatch(FSA::dunnTest(Gaus ~ HL_state, method = "none")$res, error = function(err){NA}),
-              .groups = "drop") %>%
-    unnest_wider(dunns) %>%
-    filter(! is.na(Comparison)) %>%
-    mutate(HL_state = NA) %>%
-    relocate(HL_state, .after = BG) %>%
-    bind_rows(hit_percent_by_BG.aov.data %>%
-                group_by(HL_state) %>%
-                summarise(dunns = tryCatch(FSA::dunnTest(hit_percent ~ BG, method = "none")$res, error = function(err){NA}),
-                          .groups = "drop") %>%
-                unnest_wider(dunns) %>%
-                filter(! is.na(Comparison))) %>%
-    mutate(P.adj = p.adjust(P.unadj, "BH"),
-           sig = stars.pval(P.adj))
-
-filter(hit_percent_by_BG.aov.postHoc, ! sig %in% c(" "))
 
 
 # FA% Count
