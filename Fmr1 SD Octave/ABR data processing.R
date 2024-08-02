@@ -100,3 +100,71 @@ ggsave(file="Fmr1_SD_ABR_lat.jpg", path = "C:/Users/Noelle/Box/Behavior Lab/Shar
        plot = Ben_Lat_plot, 
        width = 10, height = 8, dpi = 600)
 
+# Wave ratios -------------------------------------------------------------
+
+W1_W4_ratio = 
+ABR_data_rat %>%
+  group_by(rat_ID, genotype, current_freq, , current_inten) %>%
+  do(transmute(., current_wave = "1:4",
+            Wave_amp = (filter(., current_wave == "1")$Wave_amp /
+                        filter(., current_wave == "4")$Wave_amp),
+            Wave_lat = (filter(., current_wave == "1")$Wave_lat /
+                        filter(., current_wave == "4")$Wave_lat),
+            RMS = filter(., current_wave == "1")$RMS) %>% unique)
+
+W1_W5_ratio = 
+  ABR_data_rat %>%
+  group_by(rat_ID, genotype, current_freq, , current_inten) %>%
+  do(transmute(., current_wave = "1:5",
+               Wave_amp = (filter(., current_wave == "1")$Wave_amp /
+                             filter(., current_wave == "5")$Wave_amp),
+               Wave_lat = (filter(., current_wave == "1")$Wave_lat /
+                             filter(., current_wave == "5")$Wave_lat),
+               RMS = filter(., current_wave == "1")$RMS) %>% unique)
+
+ABR_data_rat_complete = 
+  mutate(ABR_data_rat, current_wave = as.character(current_wave)) %>%
+  bind_rows(W1_W4_ratio, W1_W5_ratio) %>%
+  mutate(current_wave = factor(current_wave, ordered = TRUE,
+                               levels = c("1", "2", "3", "4", "5", "1:4", "1:5")))
+
+## Graph ----
+filter(ABR_data_rat_complete, current_freq == 0) %>%
+  filter(current_wave %in% c("1", "1:5")) %>% 
+  ggplot(aes(x = current_wave, y = Wave_lat, fill = genotype, group = interaction(current_wave, genotype, current_wave))) +
+  geom_boxplot(linewidth = 1) +
+  # geom_point(show.legend = FALSE, position = position_dodge(0.75)) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  labs(x = "Wave",
+       y = "BBN Amplitude",
+       fill = "Genotype") +
+  facet_wrap(~ current_inten, scales = "free_y") +
+  theme_classic(base_size = 20) +
+  theme(
+    # legend.position=c(.8,.8)
+    legend.position=c(.8,.1)
+  )
+
+# RMS ---------------------------------------------------------------------
+
+## Graph ----
+filter(ABR_data_rat_complete, current_freq == 0) %>%
+  filter(current_wave %in% c("1")) %>% 
+  ggplot(aes(x = current_inten, y = RMS, color = genotype, group = genotype)) +
+  stat_summary(fun = mean,
+               fun.min = function(x) mean(x) - se(x),
+               fun.max = function(x) mean(x) + se(x),
+               geom = "errorbar", width = 0, position = position_dodge(0.03)) +
+  stat_summary(fun = mean,
+               geom = "point", position = position_dodge(0.03), size = 3) +
+  stat_summary(fun = mean, geom = "line", position = position_dodge(0.03), linewidth = 1)  +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  scale_x_continuous(breaks = seq(from = 10, to = 90, by = 10)) +
+  labs(x = "Intensity (dB)",
+       y = "Signal Strength (RMS, \U003BCV)",
+       color = "Genotype") +
+  theme_classic(base_size = 20) +
+  theme(
+    # legend.position=c(.8,.8)
+    legend.position=c(.8,.2)
+  )
