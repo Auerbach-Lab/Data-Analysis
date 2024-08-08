@@ -153,7 +153,11 @@ Parametric_Check(FA_percent.aov)
 # Normal
 summary(FA_percent.aov)
 FA_percent.aov.stats = tidy(FA_percent.aov) %>% mutate(sig = stars.pval(p.value))
-# No post-Hoc testing as only stim_type is significant
+
+# Post-hoc testing
+tidy(TukeyHSD(FA_percent.aov)) %>% mutate(sig = stars.pval(adj.p.value)) %>%
+  filter(sig != " ")
+
 
 # FA rate for tones by BG
 FA_percent_by_BG.aov.data = stats_table_by_BG %>%
