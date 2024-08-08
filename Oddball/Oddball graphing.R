@@ -90,6 +90,9 @@ individual_graphs$plot
 Rxn_table %>%
   filter(str_detect(Genotype, pattern = "Fmr1")) %>%
   filter(task %in% c("Base case", "Rotating") & detail %in% c("4-6", "Round 1")) %>%
+  mutate(group = case_when(rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 ~ "Group 2",
+                           .default = "Unknown")) %>%
   # filter(rat_ID < 300) %>%
   ggplot(aes(x = Position, y = Rxn_diff, color = Genotype)) +
   stat_summary(fun = mean,
