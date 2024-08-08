@@ -272,8 +272,9 @@ Individual_Graphs =
                     geom = "errorbar", position = position_dodge(0.5), width = 0) +
        stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                     geom = "point", position = position_dodge(0.5), size = 3) +
-       stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+       stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                     geom = "line", position = position_dodge(0.5)) +
+       # geom_smooth(se = FALSE, na.rm = TRUE) +
        labs(x = "Intensity (dB)",
             y = "Reaction time (ms, mean +/- SE)",
             color = "Treatment",
@@ -282,7 +283,7 @@ Individual_Graphs =
                                      "Vehicle" = "darkblue", 
                                      "Rapamycin" = "red",
                                      "Recovery" = "goldenrod",
-                                     "Post Treatment" = "darkgreen")) +
+                                     "Post Treatment" = "forestgreen")) +
        scale_x_continuous(breaks = seq(0, 90, by = 10)) +
        theme_classic() +
        theme(
