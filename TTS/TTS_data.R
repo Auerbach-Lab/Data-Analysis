@@ -357,6 +357,17 @@ Rxn_table_over_TH_step_size = Rxn_5step_table %>%
   select(-data) %>%
   unique()
 
+## Change after TTS ----
+# postHL_rats = filter(core_data, HL_state == "post-HL")$rat_ID %>% unique
+
+Rxn_diff_table = 
+  Rxn_table %>%
+  # filter(rat_ID %in% postHL_rats) %>%
+  group_by(rat_ID, rat_name, BG_type, BG_Intensity, Frequency, Duration, Intensity) %>%
+  do(Rxn_diff = filter(., HL_state == "baseline")$Rxn - 
+                            filter(., HL_state == "post-HL")$Rxn) %>% 
+  mutate(Rxn_diff = if(is_empty(Rxn_diff)) Rxn_diff = NA_integer_ else unlist(Rxn_diff))
+
 
 
 
