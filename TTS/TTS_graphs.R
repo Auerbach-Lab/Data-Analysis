@@ -8,7 +8,7 @@ n_fun <- function(x){
 }
 
 # Descriptive Stats -------------------------------------------------------
-# Trial Count
+## Trial Count ----
 stats_table %>%
   mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
   ggplot(aes(x = HL_state, y = trial_count, fill = HL_state, group = HL_state)) +
@@ -31,7 +31,7 @@ ggsave(filename = "Trial Count.jpg",
        plot = last_plot(),
        width = 8, height = 6, units = "in", dpi = 300)
 
-# Trial Count by BG
+## Trial Count by BG ----
 stats_table_by_BG %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
   mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL")),
@@ -68,7 +68,7 @@ ggsave(filename = "Trial Count by BG.jpg",
        plot = last_plot(),
        width = 8, height = 6, units = "in", dpi = 300)
 
-# Trial Count by group
+## Trial Count by group ----
 stats_table_detail %>%
   mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
   # Add group numbers to look for effects between groups
@@ -97,7 +97,7 @@ ggsave(filename = "Trial count by group.jpg",
        plot = last_plot(),
        width = 8, height = 6, units = "in", dpi = 300)
 
-# Hit % Count
+## Hit % Count ----
 # TODO:redo with new stats
 stats_table %>%
   mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
@@ -106,13 +106,13 @@ stats_table %>%
   scale_fill_manual(values = c("#F8766D", "#C77CFF", "#00BA38", "#00BFC4")) +
   labs(title = "Hit%",
        x = "Hearing Loss Phase (through time)",
-       y = "Correct responses on go trials (Hits) %",
-       caption = parse(text = glue(
-         "'Significantly worse hit rate immediatedly after hearing loss ('*p[max]*' (BH adjusted) = {
-         round(max(filter(hit_percent.aov.postHoc, term == 'HL_state' & str_detect(contrast, pattern = '-HL$'))$adj.p.value), digits = 2)}). Significantly fewer trials of tones ('*f[{filter(hit_percent.aov.stats, term == 'stim_type')$df}]*' = {
-         round(filter(hit_percent.aov.stats, term == 'stim_type')$statistic, digits = 2)}, p = {
-         round(filter(hit_percent.aov.stats, term == 'stim_type')$p.value, digits = 2)})'"
-         ))) +
+       y = "Correct responses on go trials (Hits) %") +
+       # caption = parse(text = glue(
+       #   "'Significantly worse hit rate immediatedly after hearing loss ('*p[max]*' (BH adjusted) = {
+       #   round(max(filter(hit_percent.aov.postHoc, term == 'HL_state' & str_detect(contrast, pattern = '-HL$'))$adj.p.value), digits = 2)}). Significantly fewer trials of tones ('*f[{filter(hit_percent.aov.stats, term == 'stim_type')$df}]*' = {
+       #   round(filter(hit_percent.aov.stats, term == 'stim_type')$statistic, digits = 2)}, p = {
+       #   round(filter(hit_percent.aov.stats, term == 'stim_type')$p.value, digits = 2)})'"
+       #   ))) +
   facet_wrap( ~ stim_type, ncol = 5, scales = "fixed", strip.position = "bottom") +
   # # label only the tone facet
   # geom_text(data = data.frame(x = 2, y = 101, stim_type = "tone", HL_state = "HL",
@@ -130,12 +130,8 @@ ggsave(filename = "Hit percent.jpg",
        plot = last_plot(),
        width = 8, height = 6, units = "in", dpi = 300)
 
-label = tibble(
-  HL_state = "baseline", FA_percent = FA_cutoff, stim_type = "BBN", label = glue("Guessing cutoff {FA_cutoff * 100}%")
-)
 
-
-# Hit rate by BG
+## Hit rate by BG ----
 stats_table_by_BG %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
   mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL")),
@@ -151,13 +147,13 @@ stats_table_by_BG %>%
   stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE,
                position = position_dodge(1), vjust = 2, size = 2) +
   # within BG
-  geom_text(data = filter(hit_percent_by_BG.aov.postHoc, is.na(HL_state) & sig != " "),
+  geom_text(data = filter(hit_percent_by_BG.aov.postHoc, is.na(HL_state) & ! sig %in% c(" ", ".")),
             aes(x = 1.5, y = 95, label = sig), size = 8) +
-  geom_segment(data = filter(hit_percent_by_BG.aov.postHoc, is.na(HL_state) & sig != " "),
+  geom_segment(data = filter(hit_percent_by_BG.aov.postHoc, is.na(HL_state) & ! sig %in% c(" ", ".")),
                aes(x = 1, xend = 2, y = 94.8, yend = 94.8)) +
   # Between BG
   geom_text(data = filter(hit_percent_by_BG.aov.postHoc, !is.na(HL_state) &
-                            sig != " " & str_detect(Comparison, pattern = "BBN", negate = TRUE)) %>%
+                            ! sig %in% c(" ", ".") & str_detect(Comparison, pattern = "BBN", negate = TRUE)) %>%
               mutate(BG = str_remove(Comparison, pattern = " - Tones with no BG")),
             aes(y = 99, label = sig), size = 8) +
   geom_segment(data = tibble(BG = "Tones with no BG", HL_state = "baseline"),
@@ -166,7 +162,8 @@ stats_table_by_BG %>%
                aes(x = -Inf, xend = Inf, y = 100, yend = 100)) +
   geom_segment(data = tibble(BG = "Pink noise at 50dB", HL_state = "baseline"),
                aes(x = -Inf, xend = 1, y = 100, yend = 100)) +
-  labs(title = "Hit rate",
+  scale_y_continuous(limits = c(70, 100), expand = c(0, 0)) +
+  labs(title = "Hit rate (%)",
        x = "Hearing Loss Phase",
        y = "Hit rate",
       ) +
@@ -186,7 +183,7 @@ ggsave(filename = "Hit rate by BG.jpg",
        width = 8, height = 6, units = "in", dpi = 300)
 
 
-# Hit % by group
+## Hit % by group ----
 stats_table_detail %>%
   mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
   # Add group numbers to look for effects between groups
@@ -216,14 +213,22 @@ ggsave(filename = "Hit rate by group.jpg",
        plot = last_plot(),
        width = 8, height = 6, units = "in", dpi = 300)
 
-# FA % Count
+## FA % Count ----
+
+label = tibble(
+  HL_state = "baseline", FA_percent = FA_cutoff, stim_type = "BBN", label = glue("Guessing cutoff {FA_cutoff * 100}%")
+) %>% mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL")))
+  
+
 stats_table %>%
   mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
   ggplot(aes(x = HL_state, y = (FA_percent * 100), fill = HL_state, group = HL_state)) +
   geom_hline(yintercept = (FA_cutoff * 100), color = "blue", linetype = "longdash") +
-  geom_text(data = label, aes(label = label), color = "blue", nudge_y = 2) +
+  geom_text(data = label, aes(label = label), color = "blue", nudge_y = 1, nudge_x = 0.5) +
   geom_boxplot(na.rm = TRUE, position = position_dodge(1), linewidth = 1, width = 0.8) +
-  scale_fill_manual(values = c("#F8766D", "#C77CFF", "#00BA38", "#00BFC4")) +
+  scale_fill_manual(values = c("baseline" = "#F8766D", "HL" = "#C77CFF", 
+                               "recovery" = "#00BA38", "post-HL" = "#00BFC4")) +
+  scale_y_continuous(limits = c(0, 50), expand = c(0, 0)) +
   labs(title = "False Alarm %",
        x = "Hearing Loss Phase (through time)",
        y = "Incorrect responses on no-go trials (False Alarms) %",
@@ -249,7 +254,7 @@ ggsave(filename = "FA percent.jpg",
 # FA rate by BG
 stats_table_by_BG %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
-  mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL")),
+  mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"), ordered = TRUE),
          BG = case_when(
            BG_type == "None" & stim_type == "BBN" ~ "BBN with no BG",
            BG_type == "None" & stim_type == "tone" ~ "Tones with no BG",
@@ -422,17 +427,17 @@ TH_graph_data %>%
   geom_boxplot(na.rm = TRUE, position = position_dodge(1), linewidth = 1, width = 0.8) +
   # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
   stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 2) +
-  geom_text(data = TH_annotations, aes(label = sig, fill = NULL, group = NULL), size = 10, nudge_y = 8) +
+  # geom_text(data = TH_annotations, aes(label = sig, fill = NULL, group = NULL), size = 10, nudge_y = 8) +
   scale_fill_manual(values = c("#F8766D", "#00BFC4")) +
   labs(title = "Changes in threshold in noise due to hearing loss",
        x = "Frequency (kHz)",
        y = "Threshold (dB)",
-       fill = "Hearing Loss",
-       caption = glue("Only 8kHz has significant difference
-                      30dB: (Z = {round(filter(TH_postHoc_BG, sig != ' ' & BG_Intensity == 30)$Z, digits = 2)}, p = {
-                      round(filter(TH_postHoc_BG, sig != ' ' & BG_Intensity == 30)$P.adj, digits = 2)}); 50dB: (Z = {
-                      round(filter(TH_postHoc_BG, sig != ' ' & BG_Intensity == 50)$Z, digits = 2)}, p = {
-                      round(filter(TH_postHoc_BG, sig != ' ' & BG_Intensity == 50)$P.adj, digits = 2)})")) +
+       fill = "Hearing Loss") +
+       # caption = glue("Only 8kHz has significant difference
+       #                30dB: (Z = {round(filter(TH_postHoc_BG, sig != ' ' & BG_Intensity == 30)$Z, digits = 2)}, p = {
+       #                round(filter(TH_postHoc_BG, sig != ' ' & BG_Intensity == 30)$P.adj, digits = 2)}); 50dB: (Z = {
+       #                round(filter(TH_postHoc_BG, sig != ' ' & BG_Intensity == 50)$Z, digits = 2)}, p = {
+       #                round(filter(TH_postHoc_BG, sig != ' ' & BG_Intensity == 50)$P.adj, digits = 2)})")) +
   facet_wrap( ~ BG, ncol = 5, scales = "free_x") +
   theme_classic() +
   theme(
@@ -564,7 +569,7 @@ Rxn_table_over_TH_detail %>%
   geom_smooth(se = FALSE, na.rm = TRUE, linewidth = 1.2,
               method = "nls", formula = y ~ SSasymp(x, yf, y0, log_alpha)
               ) +
-  geom_text(data = Rxn_annotations, aes(label = sig), size = 10, show.legend = FALSE) +
+  # geom_text(data = Rxn_annotations, aes(label = sig), size = 10, show.legend = FALSE) +
   scale_color_manual(values = c("#F8766D", "#00BFC4")) +
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
@@ -677,6 +682,38 @@ return(tibble_row(single_frequency = single_frequency, graph = graph, status = "
 }
 
 lapply(c(4, 8, 16, 32), Single_Frequency_Grapher) %>% bind_rows()
+
+## Change after TTS ----
+annotation = TH_averages %>% Rxn_Filter %>% 
+  filter(Frequency != "BBN" & HL_state == "post-HL") %>% 
+  filter(Duration == 50) %>%
+  select(-HL_state)
+
+Rxn_diff_table %>%
+  filter(Frequency != 0) %>%
+  filter(Intensity >= 0) %>%
+  # filter(! str_detect(Intensity, pattern = "5$")) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% factor(levels = c("4", "8", "BBN", "16", "32")),
+         BG = if_else(BG_type == "None", "None", paste0(BG_type, " noise at ", BG_Intensity, "dB")) %>%
+           factor(levels = c("None", "Pink noise at 30dB", "White noise at 50dB", "Pink noise at 50dB"))) %>%
+  filter(BG != "White noise at 50dB") %>%
+  ggplot(aes(x = Intensity, y = Rxn_diff, color = BG)) +
+  geom_hline(yintercept = 0, linetype = "solid") +
+  stat_summary(fun = mean,
+               fun.min = function(x) mean(x, na.rm = TRUE) - FSA::se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + FSA::se(x),
+               geom = "errorbar", width = 0, position = position_dodge(1)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "point", position = position_dodge(1), size = 2) +
+  geom_smooth(se = FALSE, na.rm = TRUE, linewidth = 1.2) +
+  geom_vline(data = annotation, 
+             aes(xintercept = TH, color = BG), linetype = "longdash", show.legend = FALSE) +
+  labs(title = "Change in reaction curves after Hearing Loss",
+       color = "Background Sound") +
+  facet_wrap(~ Frequency, scales = "free_y") +
+  theme_classic() +
+  theme(#legend.position = c(0.9, 0.2),
+        legend.background=element_blank())
 
 # dprime curve ------------------------------------------------------------
 
