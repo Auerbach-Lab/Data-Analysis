@@ -691,7 +691,7 @@ annotation = TH_averages %>% Rxn_Filter %>%
 
 Rxn_diff_table %>%
   filter(Frequency != 0) %>%
-  filter(Intensity >= 0) %>%
+  filter(Intensity >= 10) %>%
   # filter(! str_detect(Intensity, pattern = "5$")) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% factor(levels = c("4", "8", "BBN", "16", "32")),
          BG = if_else(BG_type == "None", "None", paste0(BG_type, " noise at ", BG_Intensity, "dB")) %>%
@@ -709,7 +709,10 @@ Rxn_diff_table %>%
   geom_vline(data = annotation, 
              aes(xintercept = TH, color = BG), linetype = "longdash", show.legend = FALSE) +
   labs(title = "Change in reaction curves after Hearing Loss",
+       x = "Intensity (dB)",
+       y = "Change in reaction time (ms)",
        color = "Background Sound") +
+  scale_x_continuous(breaks = seq(-50, 90, by = 20)) +
   facet_wrap(~ Frequency, scales = "free_y") +
   theme_classic() +
   theme(#legend.position = c(0.9, 0.2),
