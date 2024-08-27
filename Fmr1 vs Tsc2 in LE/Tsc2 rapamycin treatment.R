@@ -10,7 +10,8 @@ Tsc2_rapamycin_treated_rats =
   core_data %>%
   filter(line == "Tsc2-LE") %>% # only Tsc2 rats are being treated so this speeds up
   filter(detail %in% c("Vehicle (Tween 80)", "Rapamycin (6mg/kg)",
-                       "Post Treatment", "3+w Post Treatment")) %>% # treatment or control condition, to select for rats with both add filter(all(conditions))
+                       "Post Treatment", "3+w Post Treatment",
+                       "Rapamycin 2 (6mg/kg)")) %>% # treatment or control condition, to select for rats with both add filter(all(conditions))
   .$rat_ID %>% # use rat_ID because its unique
   unique # de-duplicate
   
@@ -68,7 +69,8 @@ vehicle_check_rxn %>%
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
        color = "Genotype", linetype = "") +
-  scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", "Rapamycin (6mg/kg)" = "solid")) +
+  scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", 
+                                   "Rapamycin (6mg/kg)" = "solid")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
   theme_classic() +
@@ -98,9 +100,11 @@ TH_table %>%
   filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)",
                        "Recheck", "Post Treatment")) %>%
   mutate(detail = factor(detail, levels = c("Recheck", "Vehicle (Tween 80)",
-                                            "Rapamycin (6mg/kg)", "Post Treatment", "3+w Post Treatment"),
+                                            "Rapamycin (6mg/kg)", 
+                                            "Post Treatment", "3+w Post Treatment",
+                                            "Rapamycin 2 (6mg/kg)"),
                          labels = c("Pre-Treatment", "Vehicle", "Rapamycin",
-                                    "Recovery", "3+ weeks Post Treatment"))) %>%
+                                    "Recovery", "3+ weeks Post Treatment", "Rapamycin 2"))) %>%
   ggplot(aes(x = genotype, y = TH, fill = genotype)) +
   geom_boxplot(linewidth = 1, width = 0.8) +
   # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
@@ -136,7 +140,7 @@ Rap_rxn =
   filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
   filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
   filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Recheck",
-                       "Post Treatment", "3+w Post Treatment")) %>%
+                       "Post Treatment", "3+w Post Treatment", "Rapamycin 2 (6mg/kg)")) %>%
   filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
   left_join(Tsc2_treatment_dates %>% 
               filter(detail == "Vehicle (Tween 80)") %>% 
@@ -150,7 +154,8 @@ Rap_rxn =
                   `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`)) %>%
   mutate(detail = ordered(detail, levels = c("Recheck", "Vehicle (Tween 80)",
                                              "Rapamycin (6mg/kg)",
-                                             "Post Treatment", "3+w Post Treatment")))
+                                             "Post Treatment", "3+w Post Treatment",
+                                             "Rapamycin 2 (6mg/kg)")))
 
 ## Rxn Graph ====
 Rap_rxn %>%
@@ -172,7 +177,8 @@ Rap_rxn %>%
        color = "Genotype", linetype = "Treatment") +
   scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", 
                                    "Rapamycin (6mg/kg)" = "solid", "Post Treatment" = "dotdash",
-                                   "3+w Post Treatment" = "twodash")) +
+                                   "3+w Post Treatment" = "twodash",
+                                   "Rapamycin 2 (6mg/kg)" = 11)) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
   theme_classic() +
@@ -203,7 +209,8 @@ Rap_rxn %>%
        color = "Genotype", linetype = "Treatment") +
   scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", 
                                    "Rapamycin (6mg/kg)" = "solid", "Post Treatment" = "dotdash",
-                                   "3+w Post Treatment" = "twodash")) +
+                                   "3+w Post Treatment" = "twodash",
+                                   "Rapamycin 2 (6mg/kg)" = 11)) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
   facet_wrap(~ sex) +
@@ -234,7 +241,8 @@ Rap_rxn %>%
        color = "Genotype", linetype = "Treatment") +
   scale_linetype_manual(values = c("Recheck" = "longdash", "Vehicle (Tween 80)" = "dotted", 
                                    "Rapamycin (6mg/kg)" = "solid", "Post Treatment" = "dotdash",
-                                   "3+w Post Treatment" = "twodash")) +
+                                   "3+w Post Treatment" = "twodash",
+                                   "Rapamycin 2 (6mg/kg)" = 11)) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
   facet_wrap(~ sex) +
@@ -252,16 +260,19 @@ Individual_Graphs =
   filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
   filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
   filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Recheck",
-                       "Post Treatment", "3+w Post Treatment")) %>%
+                       "Post Treatment", "3+w Post Treatment",
+                       "Rapamycin 2 (6mg/kg)")) %>%
   filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
   unnest(reaction) %>% 
   filter(`Inten (dB)` >= 20) %>%
   mutate(name = rat_name,
          detail = factor(detail, ordered = TRUE,
                          levels = c("Recheck", "Vehicle (Tween 80)", "Rapamycin (6mg/kg)",
-                                    "Post Treatment", "3+w Post Treatment"),
+                                    "Post Treatment", "3+w Post Treatment",
+                                    "Rapamycin 2 (6mg/kg)"),
                          labels = c("Pre-Treatment", "Vehicle", "Rapamycin",
-                                    "Recovery", "Post Treatment"))) %>%
+                                    "Recovery", "Post Treatment",
+                                    "Rapamycin 2"))) %>%
   group_by(rat_ID, name) %>%
   do(single_rat_graph = 
        ggplot(data = .,
@@ -283,7 +294,8 @@ Individual_Graphs =
                                      "Vehicle" = "darkblue", 
                                      "Rapamycin" = "red",
                                      "Recovery" = "goldenrod",
-                                     "Post Treatment" = "forestgreen")) +
+                                     "Post Treatment" = "forestgreen",
+                                     "Rapamycin 2" = "deepskyblue")) +
        scale_x_continuous(breaks = seq(0, 90, by = 10)) +
        theme_classic() +
        theme(
