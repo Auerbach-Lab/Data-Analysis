@@ -14,7 +14,7 @@ library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stri
 library(purrr); library(forcats); library(glue); library(data.table)
 
 # analysis & visualization
-library(ggplot2); library(nortest); library(FSA)
+library(ggplot2); library(nortest); library(FSA); library(ggbeeswarm)
 
 
 
@@ -25,8 +25,8 @@ rat_decoder = fread(glue("{projects_folder}/rat_archive.csv"),
                     select = c("Rat_ID", "DOB", "Sex", "Genotype", "HL_date"))
 cat("done.\n")
 
-# # Individual Trial Data
-# load(paste0(projects_folder, "Oddball-LE_archive.Rdata"), .GlobalEnv)
+# Individual Trial Data
+trials_data = fread(paste0(projects_folder, "Oddball_archive.csv.gz"))
 
 cat("Filtering...")
 
@@ -57,6 +57,19 @@ core_data = dataset %>%
 
 Tone_on_Tone_rats = filter(core_data, phase == "Tone-Tone")$rat_ID %>% unique
 
+Trials_table = 
+  trials_data %>%
+  as_tibble() %>%
+  filter(UUID %in% core_data$UUID) %>%
+  left_join(
+    select(core_data, date, rat_name, rat_ID, Genotype,
+           UUID, invalid, analysis_type, 
+           file_name, experiment, phase, task, detail,
+           omit_list, block_size), by = join_by(UUID)) %>%
+  # filter out omitted trials
+  group_by(UUID) %>% 
+  do(filter(., ! Trial_number %in% .$omit_list)) %>%
+  ungroup
 
 # Descriptive Stats -------------------------------------------------------
 
@@ -73,6 +86,46 @@ Summary_table = core_data %>%
           FA = mean(FA_percent, na.rm = T) * 100,
           .by = c(rat_ID, rat_name, Genotype, task, phase, go, no_go))
 
+## Trials calculations ----
+
+Trial_run_summary_table = 
+  Trials_table %>%
+  as_tibble() %>%
+  # Omit Training & Reset days
+  dplyr::filter(! task %in% c("Training", "Reset")) %>%
+  reframe(trials = n(), 
+          Rxn = mean(`Reaction_(s)`, na.rm = TRUE) * 1000,
+          delay = mean(`Delay (s)`, na.rm = TRUE),
+          .by = c(UUID, date, rat_ID, rat_name, Genotype, 
+                  task, phase, detail, 
+                  Stim_ID, Trial_type, `Inten (dB)`, Response)) %>% 
+  arrange(UUID, Stim_ID)
+
+multiple_runs_in_a_day = 
+  reframe(core_data,
+          UUID_count = length(unique(UUID)),
+          UUIDs = unique(UUID),
+          .by = c(date, rat_ID, rat_name, Genotype, task, phase, detail)) %>%
+  filter(UUID_count > 1)
+
+Daily_summary_from_trials = 
+  Trials_table %>%
+  as_tibble() %>%
+  # Omit Training & Reset days
+  dplyr::filter(! task %in% c("Training", "Reset")) %>%
+  reframe(trials = n(), 
+          Rxn = mean(`Reaction_(s)`, na.rm = TRUE) * 1000,
+          delay = mean(`Delay (s)`, na.rm = TRUE),
+          .by = c(date, rat_ID, rat_name, Genotype, 
+                  task, phase, detail, 
+                  Stim_ID, Trial_type, `Inten (dB)`, Response)) %>%
+  mutate(total_trials = sum(trials),
+         .by = c(date, rat_ID, rat_name, Genotype, task, phase, detail))
+
+Rat_trial_summary = 
+  
+  
+
 # Tone-Tone Summary -------------------------------------------------------
 Summary_table %>%
   filter(rat_ID > 300) %>%
@@ -86,7 +139,35 @@ Summary_table %>%
 
 # Probe FA count ----------------------------------------------------------
 
-Probe_count = core_data %>%
+probe_days = core_data %>%
+  # Omit Training & Reset days
+  dplyr::filter(task %in% c("Probe trials"))
+
+Probe_table = 
+  trials_data %>%
+  as_tibble() %>%
+  # get only days with probes
+  filter(UUID %in% probe_days$UUID) %>%
+  # get only probe trials (Trial_type = 0 OR Type = 0 OR `Inten (dB)` = 0)
+  filter(Trial_type == 0) %>%
+  left_join(probe_days, by = join_by(UUID))
+
+Probe_results = 
+  Probe_table %>%
+  count(UUID, Response) %>% # FAs and CRs are going to be in different rows
+  spread(Response, n) %>%   # move them to columns
+  left_join(probe_days, by = join_by(UUID)) %>%
+  # get table
+  reframe(FA_count = sum(FA, na.rm = T),
+          Probe_count = sum(CR, FA, na.rm = T),
+          Freq = unique(go) %>% sort() %>% str_flatten_comma(),
+          .by = c(rat_ID, rat_name, Genotype, task, phase, detail)) %>%
+  arrange(rat_ID)
+
+filter(Probe_results, rat_ID > 300) %>% View
+
+## FAs on non-probe trials ---
+Probe_FA_count = core_data %>%
   # Omit Training & Reset days
   dplyr::filter(task %in% c("Probe trials")) %>%
   unnest(FA_detailed) %>%
@@ -98,7 +179,7 @@ Probe_count = core_data %>%
           .by = c(rat_ID, rat_name, Genotype, task, phase, detail, position)) %>%
   arrange(rat_ID, position)
 
-Probe_count_by_go = core_data %>%
+Probe_FA_count_by_go = core_data %>%
   # Omit Training & Reset days
   dplyr::filter(task %in% c("Probe trials")) %>%
   unnest(FA_detailed) %>%
@@ -110,7 +191,7 @@ Probe_count_by_go = core_data %>%
           .by = c(rat_ID, rat_name, Genotype, task, phase, detail, go, position)) %>%
   arrange(rat_ID, go, position)
 
-filter(Probe_count, rat_ID > 300) %>% View
+# filter(Probe_FA_count, rat_ID > 300) %>% View
 
 
 # Get Reaction times by rat -----------------------------------------------
