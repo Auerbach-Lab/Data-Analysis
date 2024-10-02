@@ -8,9 +8,15 @@ n_fun <- function(x){
 }
 
 # Descriptive Stats -------------------------------------------------------
-## Trial Count ----
-stats_table %>%
+rats_post_group = stats_table_duration %>%
   mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
+  filter(duration == "50ms" & HL_state == "post-HL") %>% .$rat_ID %>% unique()
+
+## Trial Count ----
+stats_table_duration %>%
+  mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
+  filter(duration == "50ms") %>%
+  # filter(rat_ID %in% rats_post_group) %>%
   ggplot(aes(x = HL_state, y = trial_count, fill = HL_state, group = HL_state)) +
   geom_boxplot(na.rm = TRUE, position = position_dodge(1), linewidth = 1, width = 0.8) +
   scale_fill_manual(values = c("#F8766D", "#C77CFF", "#00BA38", "#00BFC4")) +
@@ -34,6 +40,7 @@ ggsave(filename = "Trial Count.jpg",
 ## Trial Count by BG ----
 stats_table_by_BG %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
+  # filter(rat_ID %in% rats_post_group) %>%
   mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL")),
          BG = case_when(
            BG_type == "None" & stim_type == "BBN" ~ "BBN with no BG",
@@ -767,8 +774,11 @@ dprime_graph_data =
   filter(! (Frequency %in% c(4, 8) && Intensity == 0)) %>%
   filter(! (Frequency %in% c(32) && Intensity == -15)) %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
-  filter(Duration == 50) %>% filter(BG_type != "White") %>%
-  mutate(BG = if_else(BG_type == "None", "None", paste0(BG_type, " noise at ", BG_Intensity, "dB")) %>%
+  filter(Duration == 50) %>% 
+  filter(BG_type != "White") %>%
+  filter(! (BG_type == "Pink" & BG_Intensity == "30")) %>%
+  mutate(BG = if_else(BG_type == "None", "None", 
+                      paste0(BG_type, " noise at ", BG_Intensity, "dB")) %>%
            factor(levels = c("None", "Pink noise at 30dB", "White noise at 50dB", "Pink noise at 50dB"))) %>%
   filter(Frequency != 0)
 

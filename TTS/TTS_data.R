@@ -80,6 +80,9 @@ core_data = dataset %>%
                                   TRUE ~ "ISSUE")) %>%
   select(-BG)
 
+core_trials = filter(trial_archive, UUID %in% core_data$UUID) %>%
+  left_join(select(dataset, UUID, omit_list))
+
 
 # Filter to rats who have post-HL measures
 # rats_survived_to_post_HL = filter(core_data, HL_state == "post-HL") %>% .$rat_ID %>% unique %>% as.list()
@@ -97,6 +100,18 @@ stats_table =
             hit_percent = mean(hit_percent, na.rm = TRUE),
             FA_percent = mean(FA_percent, na.rm = TRUE),
             .groups = "drop")
+
+stats_table_duration =
+  core_data %>%
+  mutate(duration = str_extract(file_name, pattern = "(?=dB_).*?ms") %>% str_remove("dB_")) %>%
+  # Use rat_ID because its sure to be unique
+  group_by(rat_ID, rat_name, Sex, HL_state, stim_type, duration) %>%
+  # Get Averages
+  summarise(trial_count = mean(trial_count, na.rm = TRUE),
+            hit_percent = mean(hit_percent, na.rm = TRUE),
+            FA_percent = mean(FA_percent, na.rm = TRUE),
+            .groups = "drop")
+
 
 stats_table_by_BG =
   core_data %>%

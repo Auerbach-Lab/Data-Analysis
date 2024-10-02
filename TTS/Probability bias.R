@@ -51,6 +51,12 @@ stats_table %>%
   geom_point(shape = 21, size = 2) +
   geom_point(data = stats_average %>% filter(HL_state != "HL"),
              size = 6, alpha = 0.7, stroke = 2, shape = 21, show.legend = FALSE) +
+  geom_text(label="Convervative", color = "black", size = 10,
+            x = 0.1, y = 0.68) +
+  geom_text(label="Libral", color = "black", angle = 90, size = 10,
+            x = 0.33, y = 0.85) +
+  geom_text(label = "Guessing/\nChance", color = "darkred", size = 5.5,
+            x = 0.35, y = 0.25) +
   labs(title = "Individual Bias",
        x = "False Alarm %", y = "Hit %",
        color = "Sound Type", fill = "Time point"
@@ -111,6 +117,29 @@ trial_table = trial_archive %>%
   filter(UUID %in% core_runs_list$UUID) %>%
   left_join(core_runs_list, by = join_by(UUID)) %>%
   select(-UUID)
+
+
+bias_table = trial_table %>%
+  # drop Mixed days because they only have a 300ms No Go even though there are 3 durations of Go stimuli
+  filter(detail != "Mixed") %>%
+  summarise(hit_percent = sum(Response == "Hit") / sum(Response %in% c("Hit", "Miss")),
+            FA_percent = sum(Response == "FA") / sum(Response %in% c("CR", "FA")),
+            hit = sum(Response == "Hit"),
+            Go = sum(Response %in% c("Hit", "Miss")),
+            FA = sum(Response == "FA"),
+            NG =  sum(Response %in% c("CR", "FA")),
+            .by = c(rat_name, rat_ID, Sex, HL_state, BG_type, BG_Intensity,
+                    `Freq (kHz)`, `Inten (dB)`, `Dur (ms)`))
+
+bias_table =  
+  bias_table %>%
+  select(-FA_percent, -FA, -NG) %>%
+  left_join(bias_table  %>%
+              # keep only FAs and easiest intensity that is shared which is 80 NOT 90
+              filter(`Inten (dB)` %in% c(-100)) %>% select(rat_name:`Freq (kHz)`, `Dur (ms)`, FA_percent, FA, NG),
+            by = join_by(rat_name, rat_ID, Sex, HL_state, BG_type, BG_Intensity, `Freq (kHz)`, `Dur (ms)`))
+
+
 
 # BBN ---------------------------------------------------------------------
 
@@ -185,7 +214,6 @@ bias_table_BBN_filtered %>%
 
 # Tones -------------------------------------------------------------------
 
-
 ### Single frequency per file ------
 # This table is challenging to graph since FA only happen on -100
 bias_table_quiet_frequency = trial_table %>%
@@ -226,13 +254,13 @@ bias_table_quiet_binned =
             Go_hard = sum(Response %in% c("Hit", "Miss") & file_dB_range %in% hard_range),
             FA_hard = sum(Response == "FA" & file_dB_range %in% hard_range),
             NG_hard = sum(Response %in% c("CR", "FA") & file_dB_range %in% hard_range),
-            .by = c(rat_name, rat_ID, Sex, HL_state, BG_type, BG_Intensity, `Freq (kHz)`, `Dur (ms)`)) %>% View
-
-
+            .by = c(rat_name, rat_ID, Sex, HL_state, BG_type, BG_Intensity, 
+                    `Freq (kHz)`, `Dur (ms)`)) #%>% View
 # Get Averages
-reframe(hit_percent = mean(hit_percent, na.rm = TRUE),
+reframe(bias_table_quiet_binned,
+        hit_percent = mean(hit_percent, na.rm = TRUE),
         FA_percent = mean(FA_percent, na.rm = TRUE),
-        .by = c(rat_ID, rat_name, Sex, HL_state, stim_type, Freq)) %>% View
+        .by = c(rat_ID, rat_name, Sex, HL_state, `Freq (kHz)`, `Dur (ms)`)) %>% #View
 
 mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "post-HL"))) %>%
   filter(HL_state != "HL") %>%
@@ -243,6 +271,62 @@ mutate(HL_state = factor(HL_state, levels = c("baseline", "HL", "recovery", "pos
   geom_point(shape = 21, size = 2)
 
 
+## Background----
+background = bias_table %>%
+  select(-FA_percent, -FA, -NG) %>%
+  filter(`Freq (kHz)` != 0) %>%
+  filter(`Dur (ms)` == 50) %>%
+  left_join(bias_table  %>%
+              filter(`Freq (kHz)` != 0) %>%
+              filter(`Dur (ms)` == 50) %>%
+              # keep only FAs and easiest intensity that is shared which is 80 NOT 90
+              filter(`Inten (dB)` %in% c(-100)) %>% select(rat_name:`Freq (kHz)`,`Dur (ms)`, FA_percent, FA, NG),
+            by = join_by(rat_name, rat_ID, Sex, HL_state, BG_type, BG_Intensity, `Dur (ms)`)) %>%
+  select(-`Freq (kHz).y`) %>%
+  rename(`Freq (kHz)` = `Freq (kHz).x`) %>%
+  filter(HL_state %in% c("baseline", "post-HL")) %>%
+  mutate(`Freq (kHz)` = as.factor(`Freq (kHz)`),
+         Background = paste(BG_type, BG_Intensity)) %>%
+  filter(`Inten (dB)` %in% c(30))
 
+background_average =  background %>%
+  summarise(hit_percent = mean(hit_percent, na.rm = TRUE),
+            FA_percent = mean(FA_percent, na.rm = TRUE),
+            .by = c(Background, HL_state, `Freq (kHz)`, `Inten (dB)`)) %>%
+  mutate(`Freq (kHz)` = as.factor(`Freq (kHz)`)) %>%
+  arrange(HL_state)
+
+
+background_average %>%
+  ggplot(aes(x = FA_percent, y = hit_percent, fill = HL_state,
+             color = `Freq (kHz)`, group = `Freq (kHz)`)) +
+  chance_line +
+  divider_line +
+  geom_path(data = background_average, alpha = 0.8, linewidth = 1.5, show.legend = FALSE) +
+  # geom_path(aes(group = interaction(rat_ID, `Freq (kHz)`))) +
+  geom_point(size = 5, stroke = 2, shape = 21) +
+  # geom_point(data = background_average, size = 5, stroke = 2, alpha = 0.6, show.legend = FALSE) +
+  labs(title = "Individual bias near threshold (Receiver Operating Characteristic)",
+       x = "False Alarm %", y = "Hit %",
+       color = "Frequency (kHz)",
+       fill = "Time point"
+  ) +
+  bias_theme +
+  facet_wrap(~ Background) +
+  # labels
+  geom_text(label = "Convervative", color = "black", size = 8, angle = 90,
+            x = 0.11, y = 0.38) +
+  geom_text(label = "Libral", color = "black", angle = 90, size = 10,
+            x = 0.45, y = 0.85) +
+  geom_text(label = "Guessing/\nChance", color = "darkred", size = 5.5,
+            x = 0.35, y = 0.25) +
+  # scale_shape_manual(values = c(24)) +
+  coord_cartesian(xlim = c(0.1, 0.5),
+                  ylim = c(0, 1))
+
+ggsave(filename = "Bias ROC.jpg",
+       path = save_folder,
+       plot = last_plot(),
+       width = 10, height = 10, units = "in", dpi = 300)
 
 # Individual change in hit and FA across HL_state -------------------------
