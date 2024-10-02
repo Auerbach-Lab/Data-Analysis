@@ -146,6 +146,70 @@ Tsc2_TH_gaph =
 
 print(Tsc2_TH_gaph)
 
+TH_table %>%
+  filter(line == "Tsc2-LE") %>%
+  {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
+  filter(Frequency == 0) %>%
+  filter(detail %in% c("Alone", "Recheck")) %>%
+  mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                           rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 ~ "Group 2",
+                           .default = "Unknown")) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% 
+           factor(levels = c("BBN", "4", "8", "16", "32"))) %>%
+  ggplot(aes(x = genotype, y = TH, shape = line,
+             fill = genotype, color = group, group = interaction(group, line, genotype))) +
+  geom_boxplot(position = position_dodge(1), linewidth = 1, width = 0.8) +
+  # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
+  stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
+               position = position_dodge(1), vjust = 2, size = 3) +
+  scale_color_manual(values = c("Group 1" = "darkblue", "Group 2" = "goldenrod", "Group 2 Recheck" = "green")) +
+  scale_fill_manual(values = c("WT" = "grey40", "Het" = "deepskyblue", "KO" = "lightcoral")) +
+  labs(x = "",
+       y = "Threshold (dB, mean +/- SE)",
+       caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats"),
+       fill = "Genotype") +
+  facet_wrap( ~ Duration, ncol = 5, scales = "free_x") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+## Threshold by Frequency -----
+TH_table %>%
+  filter(line == "Tsc2-LE") %>%
+  {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
+  filter(Duration == 50) %>%
+  filter(detail %in% c("Alone", "Recheck")) %>%
+  mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                           rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 ~ "Group 2",
+                           .default = "Unknown")) %>%
+  #filter(group == "Group 1") %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% 
+           factor(levels = c("BBN", "4", "8", "16", "32"))) %>%
+  ggplot(aes(x = genotype, y = TH, fill = genotype, group = genotype)) +
+  geom_boxplot(position = position_dodge(1), linewidth = 1, width = 0.8) +
+  scale_color_manual(values = c("Group 1" = "darkblue", "Group 2" = "goldenrod", "Group 2 Recheck" = "green")) +
+  scale_fill_manual(values = c("WT" = "grey40", "Het" = "deepskyblue", "KO" = "lightcoral")) +
+  labs(x = "",
+       y = "Threshold (dB, mean +/- SE)",
+       fill = "Genotype") +
+  facet_wrap( ~ Frequency, ncol = 5, scales = "free_x") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    legend.position = c(.2,.2)
+  )
+
+# ggsave(filename = "Tsc2_TH_all_freq.svg",
+#        path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Tsc2 + Rapamycin Graphs",
+#        plot = last_plot(),
+#        width = 8, height = 8, units = "in", dpi = 150)
+
+
 ## Overall Threshold ----
 Tsc2_TH_overview_gaph = 
   TH_table %>%
@@ -252,7 +316,8 @@ Tsc2_Rxn_over_TH$Gaus = LambertW::Gaussianize(Tsc2_Rxn_over_TH$Rxn)[, 1]
 ## BBN Model ----
   Tsc2.Rxn.BBN.aov.data = Tsc2_Rxn_over_TH %>%
     filter(Frequency == 0) %>%
-    filter(Duration %in% c(50, 300)) %>%
+    filter(sex == "Male") %>%
+    filter(Duration %in% c(50, 100, 300)) %>%
     filter(! str_detect(Intensity, pattern = "5$")) %>% # group 1 didn't have 5 steps at 10dB diff
     filter(Intensity < 90 & Intensity > 10) # corrects for measuring differences between groups
     
@@ -457,6 +522,69 @@ print(Tsc_single_frequency_rxn_graph)
 # ggsave(filename = paste0("Tsc2_Rxn_all_freq.jpg"),
 # plot = last_plot(),
 # width = 5, height = 6, units = "in", dpi = 300)
+
+TH_annotation = 
+
+## Tones ----
+TH_annotation = 
+  TH_table %>%
+    filter(line == "Tsc2-LE") %>%
+    {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
+    filter(Frequency != 0) %>%
+    filter(detail %in% c("Alone", "Recheck")) %>%
+    mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                             rat_ID < 300 ~ "Group 1",
+                             rat_ID >= 300 ~ "Group 2",
+                             .default = "Unknown")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+  group_by(genotype, Frequency) %>%
+  summarise(TH = mean(TH, na.rm = TRUE), .groups = "drop")
+
+
+Rxn_table %>%
+  filter(line == "Tsc2-LE") %>%
+  {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
+  filter(detail %in% c("Alone", "Recheck")) %>%
+  mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                           rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 ~ "Group 2",
+                           .default = "Unknown")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+  filter(sex == "Male") %>%
+  filter(Frequency != 0) %>%
+  filter(Intensity <= 90 & Intensity >= 10) %>%
+  ggplot(aes(x = Intensity, y = Rxn, color = genotype, group = genotype)) +
+  ## Lines for each group
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1.5, position = position_dodge(1)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(1), size = 3) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "line", position = position_dodge(1)) +
+  # threshold lines
+  geom_vline(data = TH_annotation, 
+             aes(xintercept = TH, color = genotype, group = genotype), 
+             linetype = "longdash", show.legend = FALSE) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "",
+       caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats")) +
+  scale_linetype_manual(values = c("Group 1" = "solid", "Group 2 Recheck" = "longdash")) +
+  scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(~ Frequency) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
+
+ggsave(filename = "Tsc2_Rxn_tones_MALES.svg",
+       path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Tsc2 + Rapamycin Graphs",
+       plot = last_plot(),
+       width = 10, height = 8, units = "in", dpi = 150)
 
 
 # Sex differences graph ---------------------------------------------------
