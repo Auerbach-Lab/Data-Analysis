@@ -11,7 +11,7 @@ Tsc2_rapamycin_treated_rats =
   filter(line == "Tsc2-LE") %>% # only Tsc2 rats are being treated so this speeds up
   filter(detail %in% c("Vehicle (Tween 80)", "Rapamycin (6mg/kg)",
                        "Post Treatment", "3+w Post Treatment",
-                       "Rapamycin 2 (6mg/kg)")) %>% # treatment or control condition, to select for rats with both add filter(all(conditions))
+                       "Rapamycin 2 (6mg/kg)", "Post Treatment 2")) %>% # treatment or control condition, to select for rats with both add filter(all(conditions))
   .$rat_ID %>% # use rat_ID because its unique
   unique # de-duplicate
   
@@ -159,9 +159,9 @@ Rap_rxn =
 
 ## Rxn Graph ====
 Rap_rxn %>%
-  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)")) %>%
+  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Recheck")) %>%
   # filter(! str_detect(`Inten (dB)`, pattern = "5$")) %>%
-  filter(`Inten (dB)` > 15) %>%
+  filter(`Inten (dB)` > 15 & `Inten (dB)` < 85) %>%
   ggplot(aes(x = `Inten (dB)`, y = Rxn, linetype = as.factor(detail),
              color = genotype, group = interaction(detail, genotype))) +
   stat_summary(fun = function(x) mean(x, na.rm = TRUE),
@@ -261,18 +261,18 @@ Individual_Graphs =
   filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
   filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Recheck",
                        "Post Treatment", "3+w Post Treatment",
-                       "Rapamycin 2 (6mg/kg)")) %>%
+                       "Rapamycin 2 (6mg/kg)", "Post Treatment 2")) %>%
   filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
   unnest(reaction) %>% 
-  filter(`Inten (dB)` >= 20) %>%
+  filter(`Inten (dB)` >= 15) %>%
   mutate(name = rat_name,
          detail = factor(detail, ordered = TRUE,
                          levels = c("Recheck", "Vehicle (Tween 80)", "Rapamycin (6mg/kg)",
                                     "Post Treatment", "3+w Post Treatment",
-                                    "Rapamycin 2 (6mg/kg)"),
+                                    "Rapamycin 2 (6mg/kg)", "Post Treatment 2"),
                          labels = c("Pre-Treatment", "Vehicle", "Rapamycin",
                                     "Recovery", "Post Treatment",
-                                    "Rapamycin 2"))) %>%
+                                    "Rapamycin 2", "Post Treatment 2"))) %>%
   group_by(rat_ID, name) %>%
   do(single_rat_graph = 
        ggplot(data = .,
@@ -295,7 +295,8 @@ Individual_Graphs =
                                      "Rapamycin" = "red",
                                      "Recovery" = "goldenrod",
                                      "Post Treatment" = "forestgreen",
-                                     "Rapamycin 2" = "deepskyblue")) +
+                                     "Rapamycin 2" = "deepskyblue",
+                                     "Post Treatment 2" = "magenta")) +
        scale_x_continuous(breaks = seq(0, 90, by = 10)) +
        theme_classic() +
        theme(
