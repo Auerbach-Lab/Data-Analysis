@@ -48,6 +48,7 @@ Rxn_Tone_On_Tone %>%
   scale_color_manual(values = c("BBN" = "black", "6kHz" = "red", "12kHz" = "blue", "24kHz" = "green")) +
   facet_wrap(~ go) +
   theme_classic() +
+  scale_x_continuous(breaks = seq(1, 10, by = 1)) +
   theme(
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.x = element_line(color = "white")
@@ -77,6 +78,7 @@ individual_graphs = Rxn %>%
       facet_wrap(~ go) +
       labs(title = glue("{unique(.$rat_name)} Tone on Tone")) +
       ylim(-100, 50) +
+      scale_x_continuous(breaks = seq(1, 10, by = 1)) +
       theme_classic() +
       theme(
         plot.title = element_text(hjust = 0.5),
