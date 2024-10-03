@@ -487,33 +487,35 @@ Rat_acustic_table %>%
   filter(`Freq (kHz)` != 0) %>%
   filter(`Dur (ms)` == 50) %>%
   filter(HL_state %in% c("baseline", "post-HL")) %>%
-  # mutate(HL_state = if_else(HL_state == "post-HL", "After Hearing Loss and recovery", "Baseline") %>%
-  #          factor(levels = c("Baseline", "After Hearing Loss and recovery"))) %>%
+  mutate(HL_state = if_else(HL_state == "post-HL", "Hearing Loss", "Baseline") %>%
+           factor(levels = c("Baseline", "Hearing Loss"))) %>%
   mutate(`Freq (kHz)` = as.factor(`Freq (kHz)`)) %>%
   # filter(! str_detect(`Inten (dB)`, pattern = "5$")) %>%
   # beta, c or non-parametric bppd
-  ggplot(aes(x = `Freq (kHz)`, y = beta, fill = HL_state)) +
+  # ggplot(aes(x = `Freq (kHz)`, y = beta, fill = HL_state)) + # By Frequency
+  ggplot(aes(x = HL_state, y = beta, fill = HL_state)) + # Just HL_state
   # labels
-  geom_text(label = "Convervative", color = "black", size = 4, x = 0.55, y = 2.55) +
-  geom_text(label = "Liberal in background noise", color = "black", size = 4, x = 0.65, y = 0.2) +
+  geom_text(label = "Convervative", color = "black", size = 4, x = 0.75, y = 2.57) +
+  geom_text(label = "Liberal in background noise", color = "black", size = 4, x = 1.15, y = 0.23) +
   geom_boxplot() +
-  # geom_smooth(se = FALSE, na.rm = TRUE, linewidth = 1.2,
-  #             # method = "nls", formula = y ~ SSasymp(x, yf, y0, log_alpha),
-  # ) +
   scale_fill_manual(values = c("darkgrey", "white")) +
   labs(x = "Intensity (dB)",
        y = "beta (mean +/- SE)",
        title = "Change in Response Bias (beta) of tone-in-noise compared to quiet",
-       color = "Background",
-       linetype = "Hearing Loss",
-       shape = "Hearing Loss",
-       # caption = parse(text = glue("'Primary effect of background noise ('*chi^2*' = {round(filter(kruskal_results_dprime, str_detect(model, pattern = 'BG'))$statistic, digits = 2)}, p = {round(filter(kruskal_results_dprime, str_detect(model, pattern = 'BG'))$p.adj, digits = 2)})'"))
-  ) +
+       fill = ""
+       ) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
-    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+    # panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
+  
+  
+  # ggsave(filename = "beta change for HL.svg",
+  #        path = save_folder,
+  #        plot = last_plot(),
+  #        # width = 8, height = 6, units = "in", dpi = 300)
+  #        width = 5, height = 6, units = "in", dpi = 300)
 
 ## dprime ----
 Rat_acustic_table %>%
