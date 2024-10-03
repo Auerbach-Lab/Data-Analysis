@@ -361,7 +361,7 @@ Rat_acustic_table_change =
   do(dprime = filter(., HL_state == "baseline")$dprime - filter(., HL_state == "post-HL")$dprime)
 
 
-Rat_acustic_table_change =
+Rat_acustic_table_change_HL =
   Rat_acustic_table %>%
   filter(rat_ID %in% rats_survived_to_post_HL) %>%
   group_by(rat_name, rat_ID, Sex, BG_type, BG_Intensity,
@@ -370,6 +370,24 @@ Rat_acustic_table_change =
      aprime = filter(., HL_state == "baseline")$aprime - filter(., HL_state == "post-HL")$aprime,
      beta = filter(., HL_state == "baseline")$beta - filter(., HL_state == "post-HL")$beta,
      c = filter(., HL_state == "baseline")$c - filter(., HL_state == "post-HL")$c))
+
+Rat_acustic_table_change_BG =
+  Rat_acustic_table %>%
+  filter(rat_ID %in% rats_survived_to_post_HL) %>%
+  # get only white noise at 50dB
+  filter(BG_type != "White") %>%
+  filter(! (BG_type == "Pink" & BG_Intensity == "30")) %>%
+  # convert BG to single variable
+  mutate(Background = if_else(BG_type == "None", "None",
+                              paste0(BG_type, " noise at ", BG_Intensity, "dB")) %>%
+           factor(levels = c("None", "Pink noise at 30dB", "Pink noise at 50dB", "White noise at 50dB"))) %>%
+  # calculate difference
+  group_by(rat_name, rat_ID, Sex, HL_state,
+           `Freq (kHz)`, `Inten (dB)`, `Dur (ms)`) %>%
+  do(bind_cols(dprime = filter(., Background == "None")$dprime - filter(., Background == "Pink noise at 50dB")$dprime,
+               aprime = filter(., Background == "None")$aprime - filter(., Background == "Pink noise at 50dB")$aprime,
+               beta = filter(., Background == "None")$beta - filter(., Background == "Pink noise at 50dB")$beta,
+               c = filter(., Background == "None")$c - filter(., Background == "Pink noise at 50dB")$c))
 
 # Graph -------------------------------------------------------------------
 
@@ -384,11 +402,14 @@ Rat_acustic_table %>%
   filter(! (BG_type == "Pink" & BG_Intensity == "30")) %>%
   mutate(Background = if_else(BG_type == "None", "None",
                               paste0(BG_type, " noise at ", BG_Intensity, "dB")) %>%
-           factor(levels = c("None", "Pink noise at 30dB", "White noise at 50dB", "Pink noise at 50dB"))) %>%
+           factor(levels = c("None", "Pink noise at 30dB", "Pink noise at 50dB", "White noise at 50dB"))) %>%
   mutate(`Freq (kHz)` = as.factor(`Freq (kHz)`)) %>%
   filter(! str_detect(`Inten (dB)`, pattern = "5$")) %>%
   # beta, c or non-parametric bppd
   ggplot(aes(x = `Inten (dB)`, y = beta, linetype = HL_state, color = Background)) +
+  # labels
+  geom_text(label = "Convervative", color = "black", size = 4, x = 5, y = 1.8) +
+  geom_text(label = "Liberal", color = "black", size = 4, x = 5, y = 0.4) +
   stat_summary(fun = mean,
                fun.min = function(x) mean(x) - FSA::se(x),
                fun.max = function(x) mean(x) + FSA::se(x),
@@ -417,36 +438,36 @@ Rat_acustic_table %>%
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
 
-### response bias change ----
-Rat_acustic_table_change %>%
+### response bias HL change ----
+Rat_acustic_table_change_HL %>%
   filter(`Freq (kHz)` != 0) %>%
   filter(`Dur (ms)` == 50) %>%
-  filter(HL_state %in% c("baseline", "post-HL")) %>%
-  # mutate(HL_state = if_else(HL_state == "post-HL", "After Hearing Loss and recovery", "Baseline") %>%
-  #          factor(levels = c("Baseline", "After Hearing Loss and recovery"))) %>%
-  filter(BG_type != "White") %>%
-  filter(! (BG_type == "Pink" & BG_Intensity == "30")) %>%
+  # filter(BG_type != "White") %>%
+  # filter(! (BG_type == "Pink" & BG_Intensity == "30")) %>%
   mutate(Background = if_else(BG_type == "None", "None",
                               paste0(BG_type, " noise at ", BG_Intensity, "dB")) %>%
-           factor(levels = c("None", "Pink noise at 30dB", "White noise at 50dB", "Pink noise at 50dB"))) %>%
+           factor(levels = c("None", "Pink noise at 30dB", "Pink noise at 50dB", "White noise at 50dB"))) %>%
   mutate(`Freq (kHz)` = as.factor(`Freq (kHz)`)) %>%
   filter(! str_detect(`Inten (dB)`, pattern = "5$")) %>%
   # beta, c or non-parametric bppd
-  ggplot(aes(x = `Inten (dB)`, y = beta, linetype = HL_state, color = Background)) +
+  ggplot(aes(x = `Inten (dB)`, y = beta, color = Background)) +
+  # labels
+  geom_text(label = "Convervative", color = "black", size = 4, x = 5, y = 0.7) +
+  # geom_text(label = "Liberal", color = "black", size = 4, x = 5, y = 0.4) +
   stat_summary(fun = mean,
                fun.min = function(x) mean(x) - FSA::se(x),
                fun.max = function(x) mean(x) + FSA::se(x),
-               geom = "errorbar", width = 1, position = position_dodge(0)) +
+               geom = "errorbar", width = 5, position = position_dodge(0)) +
   stat_summary(fun = mean, geom = "point", position = position_dodge(0), size = 3) +
   stat_summary(fun = mean, geom = "line", position = position_dodge(0)) +
   # geom_smooth(se = FALSE, na.rm = TRUE, linewidth = 1.2,
   #             # method = "nls", formula = y ~ SSasymp(x, yf, y0, log_alpha),
   # ) +
-  scale_color_manual(values = c("black", "salmon")) +
+  scale_color_manual(values = c("black", "salmon", "mediumvioletred", "bisque4")) +
   facet_wrap( ~ `Freq (kHz)`, ncol = 2) +
   labs(x = "Intensity (dB)",
        y = "beta (mean +/- SE)",
-       title = "Response Bias (beta)",
+       title = "Change in Response Bias (beta) following Hearing loss",
        color = "Background",
        linetype = "Hearing Loss",
        shape = "Hearing Loss",
@@ -455,6 +476,39 @@ Rat_acustic_table_change %>%
   scale_x_continuous(breaks = seq(-50, 90, by = 10)) +
   scale_y_continuous(breaks = seq(-1, 5, by = 0.5)) +
   # ylim(-1, 5) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+### Response bias BG change ----
+Rat_acustic_table %>%
+  filter(`Freq (kHz)` != 0) %>%
+  filter(`Dur (ms)` == 50) %>%
+  filter(HL_state %in% c("baseline", "post-HL")) %>%
+  # mutate(HL_state = if_else(HL_state == "post-HL", "After Hearing Loss and recovery", "Baseline") %>%
+  #          factor(levels = c("Baseline", "After Hearing Loss and recovery"))) %>%
+  mutate(`Freq (kHz)` = as.factor(`Freq (kHz)`)) %>%
+  # filter(! str_detect(`Inten (dB)`, pattern = "5$")) %>%
+  # beta, c or non-parametric bppd
+  ggplot(aes(x = `Freq (kHz)`, y = beta, fill = HL_state)) +
+  # labels
+  geom_text(label = "Convervative", color = "black", size = 4, x = 0.55, y = 2.55) +
+  geom_text(label = "Liberal in background noise", color = "black", size = 4, x = 0.65, y = 0.2) +
+  geom_boxplot() +
+  # geom_smooth(se = FALSE, na.rm = TRUE, linewidth = 1.2,
+  #             # method = "nls", formula = y ~ SSasymp(x, yf, y0, log_alpha),
+  # ) +
+  scale_fill_manual(values = c("darkgrey", "white")) +
+  labs(x = "Intensity (dB)",
+       y = "beta (mean +/- SE)",
+       title = "Change in Response Bias (beta) of tone-in-noise compared to quiet",
+       color = "Background",
+       linetype = "Hearing Loss",
+       shape = "Hearing Loss",
+       # caption = parse(text = glue("'Primary effect of background noise ('*chi^2*' = {round(filter(kruskal_results_dprime, str_detect(model, pattern = 'BG'))$statistic, digits = 2)}, p = {round(filter(kruskal_results_dprime, str_detect(model, pattern = 'BG'))$p.adj, digits = 2)})'"))
+  ) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
@@ -472,7 +526,7 @@ Rat_acustic_table %>%
   filter(! (BG_type == "Pink" & BG_Intensity == "30")) %>%
   mutate(Background = if_else(BG_type == "None", "None",
                               paste0(BG_type, " noise at ", BG_Intensity, "dB")) %>%
-           factor(levels = c("None", "Pink noise at 30dB", "White noise at 50dB", "Pink noise at 50dB"))) %>%
+           factor(levels = c("None", "Pink noise at 30dB", "Pink noise at 50dB", "White noise at 50dB"))) %>%
   mutate(`Freq (kHz)` = as.factor(`Freq (kHz)`)) %>%
   filter(! str_detect(`Inten (dB)`, pattern = "5$")) %>%
   # dprime or aprime
