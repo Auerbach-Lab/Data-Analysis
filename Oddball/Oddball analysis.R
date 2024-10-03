@@ -4,7 +4,7 @@
 projects_folder = "Z:/Behavior-autoanalysis/"
 
 # FA cutoff
-FA_cutoff = .40
+FA_cutoff = .41
 
 
 # Load Packages -----------------------------------------------------------
