@@ -560,3 +560,78 @@ Rat_acustic_table %>%
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
+
+
+# Stats -------------------------------------------------------------------
+
+## BG change ----
+
+### data prep ----
+change_in_BG.aov.data = Rat_acustic_table_change_BG %>% ungroup
+change_in_BG.aov.data$beta_Gaus = LambertW::Gaussianize(change_in_BG.aov.data$beta)[, 1]
+change_in_BG.aov.data$c_Gaus = LambertW::Gaussianize(change_in_BG.aov.data$beta)[, 1]
+
+
+### beta aov model ----
+## C is more significant than beta
+  change_in_BG.bias.aov = aov(beta ~ HL_state * `Freq (kHz)`, data = change_in_BG.aov.data)
+  
+  Parametric_Check(change_in_BG.bias.aov)
+  # Not even close to normal
+  summary(change_in_BG.bias.aov)
+  
+  # Non-normal aov
+  change_in_BG.bias.aov.Kruskal =
+    tibble(
+      Comparison = c(kruskal.test(beta ~ HL_state, data = change_in_BG.aov.data)$data.name,
+                     kruskal.test(beta ~ `Freq (kHz)`, data = change_in_BG.aov.data)$data.name),
+      P.unadj = c(kruskal.test(beta ~ HL_state, data = change_in_BG.aov.data)$p.value,
+                  kruskal.test(beta ~ `Freq (kHz)`, data = change_in_BG.aov.data)$p.value)
+    ) %>% 
+    bind_rows(change_in_BG.aov.data %>%
+                summarise(Comparison = kruskal.test(beta ~ HL_state)$data.name,
+                          P.unadj = kruskal.test(beta ~ HL_state)$p.value,
+                          .by = `Freq (kHz)`)) %>%
+    mutate(P.adj = p.adjust(P.unadj, "BH"),
+           sig = stars.pval(P.adj))
+  
+  change_in_BG.bias.aov.Kruskal
+  
+  # Post-Hoc testing
+  change_in_BG.bias.aov.postHoc = 
+    dunnTest(beta ~ `Freq (kHz)`, data = change_in_BG.aov.data)$res %>%
+    mutate(sig = stars.pval(P.adj))
+  
+  filter(change_in_BG.bias.aov.postHoc, ! sig %in% c(" ", "."))
+
+
+### dprime aov model ----
+  change_in_BG.dprime.aov = aov(dprime ~ HL_state * `Freq (kHz)`, data = change_in_BG.aov.data)
+  
+  Parametric_Check(change_in_BG.dprime.aov)
+  # Not even close to normal
+  summary(change_in_BG.dprime.aov)
+  
+  # Non-normal aov
+  change_in_BG.dprime.aov.Kruskal =
+    tibble(
+      Comparison = c(kruskal.test(dprime ~ HL_state, data = change_in_BG.aov.data)$data.name,
+                     kruskal.test(dprime ~ `Freq (kHz)`, data = change_in_BG.aov.data)$data.name),
+      P.unadj = c(kruskal.test(dprime ~ HL_state, data = change_in_BG.aov.data)$p.value,
+                  kruskal.test(dprime ~ `Freq (kHz)`, data = change_in_BG.aov.data)$p.value)
+    ) %>% 
+    bind_rows(change_in_BG.aov.data %>%
+                summarise(Comparison = kruskal.test(dprime ~ HL_state)$data.name,
+                          P.unadj = kruskal.test(dprime ~ HL_state)$p.value,
+                          .by = `Freq (kHz)`)) %>%
+    mutate(P.adj = p.adjust(P.unadj, "BH"),
+           sig = stars.pval(P.adj))
+  
+  change_in_BG.dprime.aov.Kruskal
+  
+  # Post-Hoc testing
+  change_in_BG.dprime.aov.postHoc = 
+    dunnTest(dprime ~ `Freq (kHz)`, data = change_in_BG.aov.data)$res %>%
+    mutate(sig = stars.pval(P.adj))
+  
+  filter(change_in_BG.dprime.aov.postHoc, ! sig %in% c(" ", "."))
