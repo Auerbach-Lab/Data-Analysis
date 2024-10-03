@@ -85,8 +85,8 @@ core_trials = filter(trial_archive, UUID %in% core_data$UUID) %>%
 
 
 # Filter to rats who have post-HL measures
-# rats_survived_to_post_HL = filter(core_data, HL_state == "post-HL") %>% .$rat_ID %>% unique %>% as.list()
-# 
+rats_survived_to_post_HL = filter(core_data, HL_state == "post-HL") %>% .$rat_ID %>% unique
+
 # core_data = filter(core_data, rat_ID %in% rats_survived_to_post_HL)
 
 # Descriptive Stats -------------------------------------------------------
