@@ -5,6 +5,8 @@
 
 # Variables ---------------------------------------------------------------
 
+save_folder = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Tsc2 + Rapamycin Graphs"
+
 drop_seizure_rats = FALSE
 rats_with_spontanious_seizures = c("TP3", "Blue3")
 
@@ -466,6 +468,7 @@ Tsc2_Rxn_over_TH$Gaus = LambertW::Gaussianize(Tsc2_Rxn_over_TH$Rxn)[, 1]
 
 # Rxn Graphs --------------------------------------------------------------
 
+## Durations on BBN ----
 Tsc_single_frequency_rxn_graph =   
   Rxn_table %>%
     filter(line == "Tsc2-LE") %>%
@@ -519,11 +522,12 @@ Tsc_single_frequency_rxn_graph =
 
 print(Tsc_single_frequency_rxn_graph)
 
-# ggsave(filename = paste0("Tsc2_Rxn_all_freq.jpg"),
+# ggsave(filename = "Tsc2_Rxn_all_freq.jpg",
+# path = save_folder,
 # plot = last_plot(),
 # width = 5, height = 6, units = "in", dpi = 300)
 
-TH_annotation = 
+# TH_annotation = 
 
 ## Tones ----
 TH_annotation = 
@@ -776,3 +780,77 @@ Rxn_table %>%
   arrange(rat_ID)
 
 BBN_Individual_Graphs$bbn_single_rat_graph
+
+# d' ----------------------------------------------------------------------
+
+## Get data ----
+dprime_table_Tsc2 = core_data %>%
+  # Omit Training & Reset days
+  filter(! task %in% c("Training", "Reset")) %>%
+  # Omit days with > 45% FA, i.e. guessing
+  filter(FA_percent < FA_cutoff) %>%
+  filter(line == "Tsc2-LE") %>%
+  filter(detail %in% c("Alone", "Recheck")) %>%
+  mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                           rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 ~ "Group 2",
+                           .default = "Unknown")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+  # Get dprimes
+  unnest(dprime) %>%
+  summarise(dprime = mean(dprime, na.rm = TRUE), 
+            .by = c(rat_name, rat_ID, genotype, sex, group, Freq, dB, Dur)) %>%
+  rename(Frequency = Freq, Intensity = dB, Duration = Dur)
+
+## Graph ----
+dprime_table_Tsc2 %>%
+  {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
+  filter(Frequency == 0) %>%
+  filter(Duration != 100) %>%
+  filter(Intensity <= 50 & Intensity >= 10) %>%
+  filter(! str_detect(Intensity, pattern = "5$")) %>%
+  ggplot(aes(x = Intensity, y = dprime, color = genotype, group = genotype)) +
+  ## Lines for each group
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1.5, position = position_dodge(1)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(1), size = 3) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "line", position = position_dodge(1)) +
+  # threshold lines
+  geom_vline(data = TH_table %>%
+               filter(line == "Tsc2-LE") %>%
+               {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
+               filter(Frequency == 0) %>%
+               filter(Duration != 100) %>%
+               filter(detail %in% c("Alone", "Recheck")) %>%
+               mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                                        rat_ID < 300 ~ "Group 1",
+                                        rat_ID >= 300 ~ "Group 2",
+                                        .default = "Unknown")) %>%
+               filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+               group_by(genotype, Duration, sex) %>%
+               summarise(TH = mean(TH, na.rm = TRUE), .groups = "drop"), 
+             aes(xintercept = TH, color = genotype, group = genotype), 
+             linetype = "longdash", show.legend = FALSE) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "",
+       caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats")) +
+  scale_linetype_manual(values = c("Group 1" = "solid", "Group 2 Recheck" = "longdash")) +
+  scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(Duration ~ sex) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
+
+
+ggsave(filename = "Tsc2_dprime_BBN.svg",
+       path = save_folder,
+       plot = last_plot(),
+       width = 10, height = 8, units = "in", dpi = 150)
