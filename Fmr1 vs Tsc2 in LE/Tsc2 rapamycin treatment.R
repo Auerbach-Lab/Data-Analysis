@@ -5,6 +5,16 @@ source("Fmr1 vs Tsc2 in LE BBN tone data.R")
 
 # Get Treatment Group info ------------------------------------------------
 
+## Group 1 ----
+Tsc2_rapamycin_treated_rats_group1 = # c(315, 316, 318, 319, 306, 311)
+  # dynamically selected based on treatment dates
+  core_data %>%
+  filter(line == "Tsc2-LE") %>% # only Tsc2 rats are being treated so this speeds up
+  filter(date > 20240701 & date < 20241009) %>% # only Tsc2 rats are being treated so this speeds up
+  filter(detail %in% c("Rapamycin (6mg/kg)")) %>%
+  .$rat_ID %>% # use rat_ID because its unique
+  unique # de-duplicate
+
 # get list of rats with treatment
 Tsc2_rapamycin_treated_rats = 
   core_data %>%
@@ -14,7 +24,6 @@ Tsc2_rapamycin_treated_rats =
                        "Rapamycin 2 (6mg/kg)", "Post Treatment 2")) %>% # treatment or control condition, to select for rats with both add filter(all(conditions))
   .$rat_ID %>% # use rat_ID because its unique
   unique # de-duplicate
-  
 
 Tsc2_treatment_dates =
   core_data %>%
@@ -308,4 +317,4 @@ Individual_Graphs =
   ) %>%
   arrange(name)
 
-Individual_Graphs$single_rat_graph
+Individual_Graphs[c(1,2,4,5,6),]$single_rat_graph
