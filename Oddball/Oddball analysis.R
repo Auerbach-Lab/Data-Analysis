@@ -122,7 +122,7 @@ Daily_summary_from_trials =
   mutate(total_trials = sum(trials),
          .by = c(date, rat_ID, rat_name, Genotype, task, phase, detail))
 
-Rat_trial_summary = 
+# Rat_trial_summary = 
   
   
 
