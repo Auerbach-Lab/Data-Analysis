@@ -14,12 +14,12 @@ n_fun <- function(x){
 }
 
 # TH Averages -------------------------------------------------------------
-Tsc2_TH_averages = TH_table %>%
+FXS_TH_averages = TH_table %>%
   filter(line == "Fmr1-LE") %>%
   group_by(genotype, detail, Frequency , Duration) %>%
   summarise(TH = mean(TH, na.rm = TRUE), .groups = "drop")
 
-print(Tsc2_TH_averages)
+print(FXS_TH_averages)
 
 # TH Graph ----------------------------------------------------------------
 
