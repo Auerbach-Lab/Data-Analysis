@@ -259,6 +259,54 @@ ggplot(data = discrimination_FA_table,
 
 print(FA_plot)
 
+ggsave(filename = "Fmr1 SD FA for tone discrimination.svg",
+       path = save_folder,
+       plot = FA_plot,
+       width = 10, height = 8, units = "in", dpi = 150)
+
+
+# dprime ------------------------------------------------------------------
+
+## graph ====
+dprime_plot =
+Discrimination_data %>%
+  filter(detail == "Normal") %>%
+  group_by(rat_ID, rat_name, Genotype, octave_steps, Type) %>%
+  summarise(FA_percent_detailed = mean(FA_percent_detailed, na.rm = TRUE),
+            dprime_detailed = mean(dprime, na.rm = TRUE),
+            .groups = "drop") %>%
+  ggplot(aes(x = octave_steps, y = dprime_detailed,
+             color = Genotype, shape = Type, linetype = Type, group = interaction(Genotype, Type))) +
+  geom_hline(yintercept = 2, color = "forestgreen") +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - FSA::se(x, na.rm = TRUE),
+               fun.max = function(x) mean(x, na.rm = TRUE) + FSA::se(x, na.rm = TRUE),
+               geom = "errorbar", width = 0, position = position_dodge(0.1)) +
+  # mean for genotypes across all frequencies
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "line", linewidth = 1.5, position = position_dodge(.1)) +
+  # mean for each frequency by genotype
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(.1), stroke = 2) +
+  scale_x_continuous(breaks = c(1, seq(0, 12, by = 2))) +
+  #scale_y_continuous(limits = c(0, 100)) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  labs(x = "Octave Step",
+       y = "Sensitivity (d')",
+       # title = "Discrimination across an octave",
+       fill = "Line", shape = "Line",
+       color = "Genotype") +
+  theme_classic() +
+  guides(colour = guide_legend(override.aes = list(linewidth = 1)))
+
+print(dprime_plot)
+
+ggsave(filename = "Fmr1 SD d' for tone discrimination.svg",
+       path = save_folder,
+       plot = dprime_plot,
+       width = 10, height = 8, units = "in", dpi = 150)
+
+
 # Reaction time -----------------------------------------------------------
 
 Reaction_data = 
@@ -376,7 +424,7 @@ n_reversal_data =
   Reversal_training %>% ungroup %>% 
   reframe(n = paste("n =", n()), dprime_avg = mean(dprime, na.rm = TRUE),
           .by = c(day, Genotype)) %>%
-  mutate(dprime = if_else(Genotype == "WT", dprime_avg + 0.55, dprime_avg -0.55)) %>%
+  mutate(dprime = if_else(Genotype == "WT", dprime_avg + 0.55, dprime_avg - 0.55)) %>%
   group_by(Genotype, n) %>%
   do(arrange(., day) %>% head(., n = 1)) %>% arrange(day) %>% print
   
