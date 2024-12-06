@@ -29,6 +29,29 @@ ggsave(filename = "Rxn with CNO.jpg",
        width = 7.1, height = 5.75, units = "in", dpi = 300)  
 
 
+# 2-6 (full range) --------------------------------------------------------
+
+Rxn_table %>%
+  filter(task %in% c("Rotating") & detail == "2-6") %>%
+  filter(rat_ID != 100) %>%
+  ggplot(aes(x = Position, y = Rxn)) +
+  geom_line(aes(group = rat_ID, color = rat_name), alpha = 0.8, linewidth = 1)+
+  stat_summary(fun = mean,
+               fun.min = function(x) mean(x) - se(x),
+               fun.max = function(x) mean(x) + se(x),
+               geom = "errorbar", width = 0.2) +
+  stat_summary(fun = mean,
+               geom = "point", size = 3) +
+  stat_summary(fun = mean, geom = "line")  +
+  labs(y = "Reaction time (ms, mean +/- SE)",
+       color = "Rat") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = "white")
+  )
+
+
 
 # Frequencies ---------------------------------------------------
 
