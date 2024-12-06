@@ -5,7 +5,7 @@
 
 # Variables ---------------------------------------------------------------
 
-save_folder = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Tsc2 + Rapamycin Graphs"
+# save_folder = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Tsc2 + Rapamycin Graphs"
 
 drop_seizure_rats = FALSE
 rats_with_spontanious_seizures = c("TP3", "Blue3")
@@ -365,13 +365,13 @@ Tsc2_Rxn_over_TH$Gaus = LambertW::Gaussianize(Tsc2_Rxn_over_TH$Rxn)[, 1]
            geno2 = str_split_fixed(Comp2, '\\.', 3)[,2],
            sex2 = str_split_fixed(Comp2, '\\.', 3)[,3]) %>%
     # only compare within a sex (sib-sib direct comparison)
-    filter(sex1 == sex2) %>%
+    # filter(sex1 == sex2) %>%
     filter(! Sig %in% c(" ", ".")) %>%
     arrange(dur1) %>%
     select(-Comparison, -Comp1, -Comp2)
   
-## 300ms only -----
-  Tsc2.Rxn.BBN50.aov.data = Tsc2_Rxn_over_TH %>%
+## 50ms only -----
+  Tsc2.Rxn.BBN50.aov.data = Tsc2_Rxn %>%
     filter(Frequency == 0) %>%
     filter(Duration %in% c(50)) %>%
     filter(! str_detect(Intensity, pattern = "5$")) %>% # group 1 didn't have 5 steps at 10dB diff
@@ -591,7 +591,7 @@ ggsave(filename = "Tsc2_Rxn_tones_MALES.svg",
        width = 10, height = 8, units = "in", dpi = 150)
 
 
-# Sex differences graph ---------------------------------------------------
+## Sex differences graph ---------------------------------------------------
 
 Tsc_sex_differences_rxn_graph =   
   Rxn_table %>%
@@ -647,7 +647,7 @@ Tsc_sex_differences_rxn_graph =
 
 print(Tsc_sex_differences_rxn_graph)
 
-## Sex diff: individual females on graph ----
+### Sex diff: individual females on graph ----
 
 Rxn_table %>%
   filter(line == "Tsc2-LE") %>%
@@ -694,7 +694,7 @@ Rxn_table %>%
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   ) 
 
-## Sex diff: individual males on graph ----
+### Sex diff: individual males on graph ----
 
 Rxn_table %>%
   filter(line == "Tsc2-LE") %>%
@@ -801,6 +801,64 @@ dprime_table_Tsc2 = core_data %>%
   summarise(dprime = mean(dprime, na.rm = TRUE), 
             .by = c(rat_name, rat_ID, genotype, sex, group, Freq, dB, Dur)) %>%
   rename(Frequency = Freq, Intensity = dB, Duration = Dur)
+
+## BBN d' analysis ----
+Tsc2.dprime.BBN.aov.data = dprime_table_Tsc2 %>%
+  filter(Frequency == 0) %>%
+  # filter(sex == "Male") %>%
+  filter(Duration %in% c(50, 100, 300)) %>%
+  filter(! str_detect(Intensity, pattern = "5$")) %>% # group 1 didn't have 5 steps at 10dB diff
+  filter(Intensity < 90 & Intensity > 10) # corrects for measuring differences between groups
+
+
+Tsc2.dprime.BBN.aov.data$Gaus = LambertW::Gaussianize(Tsc2.dprime.BBN.aov.data$dprime)[, 1]
+
+
+Tsc2.dprime.BBN.aov = aov(Gaus ~ sex * Duration * genotype,
+                          data = Tsc2.dprime.BBN.aov.data)
+
+# Normality testing
+Parametric_Check(Tsc2.dprime.BBN.aov)
+
+# Not even close to normal
+
+# Kruskal Testing - Main effects only 
+lapply(c("genotype", "sex", "Duration", # Main effects
+         "interaction(genotype, sex)", 
+         "interaction(genotype, Duration)", 
+         "interaction(sex, Duration)",
+         "interaction(genotype, sex, Duration)"
+), 
+function(x) kruskal.test(reformulate(x, "dprime"),
+                         data = filter(Tsc2.dprime.BBN.aov.data))) %>% 
+  # Convert to table
+  do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "bonf"),
+         sig = gtools::stars.pval(adj.p.value)) %>%
+  select(method, parameter, statistic, data.name, adj.p.value, sig)
+
+# Post-Hoc Dunn's Test
+FSA::dunnTest(dprime ~ interaction(Duration, genotype, sex),
+              data = Tsc2.dprime.BBN.aov.data,
+              method = "bonf") %>%
+  .$res %>%
+  as_tibble() %>%
+  select(-P.unadj) %>%
+  mutate(Sig = gtools::stars.pval(P.adj),
+         Comp1 = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+         Comp2 = str_split_fixed(.$Comparison, ' - ', 2)[,2],
+         dur1 = str_split_fixed(Comp1, '\\.', 3)[,1] %>% as.numeric(),
+         geno1 = str_split_fixed(Comp1, '\\.', 3)[,2],
+         sex1 = str_split_fixed(Comp1, '\\.', 3)[,3],
+         dur2 = str_split_fixed(Comp2, '\\.', 3)[,1] %>% as.numeric(),
+         geno2 = str_split_fixed(Comp2, '\\.', 3)[,2],
+         sex2 = str_split_fixed(Comp2, '\\.', 3)[,3]) %>%
+  # only compare within a sex (sib-sib direct comparison)
+  # filter(sex1 == sex2) %>%
+  filter(! Sig %in% c(" ", ".")) %>%
+  arrange(dur1) %>%
+  select(-Comparison, -Comp1, -Comp2)
 
 ## Graph ----
 dprime_table_Tsc2 %>%
