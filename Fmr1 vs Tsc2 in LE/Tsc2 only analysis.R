@@ -288,7 +288,7 @@ TH_table %>%
 
 # Rxn analysis ------------------------------------------------------------
 ## Get data ----
-Tsc2_Rxn_over_TH = Rxn_table %>%
+Tsc2_Rxn = Rxn_table %>%
   filter(line == "Tsc2-LE") %>%
   {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
   filter(detail %in% c("Alone", "Recheck")) %>%
@@ -298,27 +298,13 @@ Tsc2_Rxn_over_TH = Rxn_table %>%
                            .default = "Unknown")) %>%
   filter(group %in% c("Group 1", "Group 2 Recheck"))
 
-Tsc2_Rxn_over_TH$Gaus = LambertW::Gaussianize(Tsc2_Rxn_over_TH$Rxn)[, 1]
-
-
-## Overall Model ----
-  # Tsc2_Rxn_overall_model = aov(Gaus ~ Intensity * genotype * sex * Duration,
-  #                              data = Tsc2_Rxn_over_TH)
-  # # Normality testing
-  # Parametric_Check(Tsc2_Rxn_overall_model)
-  # 
-  # # Non-normal even with transformation
-  # kruskal.test(Rxn ~ genotype,
-  #              data = filter(Tsc2_Rxn_over_TH, detail == "Alone" & Duration == "50"))
-  # 
-  # kruskal.test(Rxn ~ Frequency,
-  #              data = filter(Tsc2_Rxn_over_TH, detail == "Alone" & Duration == "50"))
+Tsc2_Rxn$Gaus = LambertW::Gaussianize(Tsc2_Rxn$Rxn)[, 1]
 
 
 ## BBN Model ----
-  Tsc2.Rxn.BBN.aov.data = Tsc2_Rxn_over_TH %>%
+  Tsc2.Rxn.BBN.aov.data = Tsc2_Rxn %>%
     filter(Frequency == 0) %>%
-    filter(sex == "Male") %>%
+    # filter(sex == "Male") %>%
     filter(Duration %in% c(50, 100, 300)) %>%
     filter(! str_detect(Intensity, pattern = "5$")) %>% # group 1 didn't have 5 steps at 10dB diff
     filter(Intensity < 90 & Intensity > 10) # corrects for measuring differences between groups
@@ -419,7 +405,7 @@ Tsc2_Rxn_over_TH$Gaus = LambertW::Gaussianize(Tsc2_Rxn_over_TH$Rxn)[, 1]
     select(-Comparison, -Comp1, -Comp2)
 
 ## 300ms only -----
-  Tsc2.Rxn.BBN300.aov.data = Tsc2_Rxn_over_TH %>%
+  Tsc2.Rxn.BBN300.aov.data = Tsc2_Rxn %>%
     filter(Frequency == 0) %>%
     filter(Duration %in% c(300)) %>%
     filter(! str_detect(Intensity, pattern = "5$")) %>% # group 1 didn't have 5 steps at 10dB diff
