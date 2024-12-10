@@ -117,11 +117,11 @@ oddball_reaction_n_table = oddball_reaction %>%
 
 # 139, 145, 153
 individual_graphs =
-  oddball_reaction_by_frequency %>% 
+  oddball_reaction_by_frequency %>%
     filter(challenge %in% c("Standard", "Base Case 2", "Base Case 3", "Middle Odds", "End Odds", "Background", "Reset", "Catch", "Reset 2")) %>%
     # filter(rat_name == "RP3") %>%
     group_by(rat_ID, rat_name) %>%
-    do(oddball_single_rat_graph = 
+    do(oddball_single_rat_graph =
       ggplot(data = .,
              aes(x = position, y = reaction_norm,
                  color = challenge, fill = frequency,
@@ -141,7 +141,7 @@ individual_graphs =
                                     "End Odds" = "violetred", "Middle Odds" = "royalblue",
                                     "Reset" = "goldenrod", "Reset 2" = "yellow3")) +
       scale_x_continuous(breaks = seq(2, 6, by = 1)) +
-      labs(title = paste0(unique(.$rat_name), " (#", unique(.$rat_ID), ") ", 
+      labs(title = paste0(unique(.$rat_name), " (#", unique(.$rat_ID), ") ",
                           unique(.$line), " ", unique(.$genotype)),
            x = "Position of different 'go tone'",
            y = "Reaction time",
