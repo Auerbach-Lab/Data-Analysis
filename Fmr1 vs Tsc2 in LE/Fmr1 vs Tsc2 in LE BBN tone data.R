@@ -9,12 +9,13 @@ core_columns = c("date", "rat_name", "rat_ID",
 
 core_data = dataset %>% 
   # Get essential columns in usable form; expands the dataframe
-  unnest_wider(assignment) %>% unnest_wider(stats) %>%
-  select(all_of(core_columns)) %>%
+  unnest_wider(assignment) %>% 
   # Only keep relevant Experiments
   filter(experiment %in% c("Fmr1-LE", "Tsc2-LE")) %>%
   # drop Oddball and Octave
   filter(! phase %in% c("Octave", "Tone-BBN")) %>%
+  unnest_wider(stats) %>%
+  select(all_of(core_columns)) %>%
   left_join(rat_decoder, by = join_by(rat_ID == Rat_ID)) %>%
   rename(sex = Sex) %>%
   mutate(gene = str_extract(Genotype, pattern = "(Fmr1|Tsc2)"), 
