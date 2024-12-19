@@ -60,7 +60,9 @@ Discrimination_data = dataset %>%
   # rename Frequency
   rename(Frequency = `Freq (kHz)`) %>%
   # calculate octave steps - string extract w/ regex is to get the go frequency
-  mutate(octave_fraction = log(as.numeric(str_extract(file_name, pattern = "[:digit:]+?(?=-.+?kHz)"))/Frequency)/log(2),
+  mutate(Go_freq = as.numeric(str_extract(file_name, pattern = "[:digit:]+?(?=-.+?kHz)")),
+         NoGo_freq = str_extract(file_name, pattern = "[:digit:]+?(kHz)") %>% str_remove("kHz") %>% as.numeric(),
+         octave_fraction = log(as.numeric(str_extract(file_name, pattern = "[:digit:]+?(?=-.+?kHz)"))/Frequency)/log(2),
          octave_steps = abs(round(octave_fraction * 12))) %>%
   # determine if 1/8 scale or zoomed in 1/16 scale
   mutate(Type = case_when(all((octave_steps %% 2) == 0) ~ "Broad",
@@ -69,7 +71,6 @@ Discrimination_data = dataset %>%
          Range = R.utils::seqToHumanReadable(octave_steps) %>% str_extract(pattern = "[:digit:]+-[:digit:]+"),
          .by = c(date, rat_ID)) %>%
   filter(Type != "Error")
-
 
 Training_data = dataset %>%
   # Only keep Training & Holding days
@@ -263,6 +264,40 @@ ggsave(filename = "Fmr1 SD FA for tone discrimination.svg",
        path = save_folder,
        plot = FA_plot,
        width = 10, height = 8, units = "in", dpi = 150)
+
+## FA by Frequency ----
+Discrimination_data %>%
+  filter(detail == "Normal") %>%
+  filter(Type == "Broad") %>%
+  group_by(rat_ID, rat_name, Genotype, Go_freq, NoGo_freq, detail, octave_steps, Type) %>%
+  summarise(FA_percent_detailed = mean(FA_percent_detailed, na.rm = TRUE),
+            .groups = "drop") %>%
+  mutate(Go_freq = as.factor(Go_freq),
+         NoGo_freq = as.factor(NoGo_freq)) %>%
+  ggplot(aes(x = octave_steps, y = FA_percent_detailed * 100,
+             color = NoGo_freq, shape = detail, linetype = Genotype, group = interaction(Genotype, NoGo_freq, Type, detail))) +
+  geom_hline(yintercept = 50, color = "forestgreen") +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - FSA::se(x, na.rm = TRUE),
+               fun.max = function(x) mean(x, na.rm = TRUE) + FSA::se(x, na.rm = TRUE),
+               geom = "errorbar", width = 0, position = position_dodge(0.1)) +
+  # mean for genotypes across all frequencies
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "line", linewidth = 1.5, position = position_dodge(.1)) +
+  # mean for each frequency by genotype
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(.1), stroke = 2, size = 3) +
+  scale_x_continuous(breaks = c(1, seq(0, 12, by = 2))) +
+  scale_y_continuous(limits = c(0, 100)) +
+  # scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  facet_wrap(~ NoGo_freq) +
+  labs(x = "Octave Step",
+       y = "False Alarm %",
+       linetype = "Genotype",
+       shape = "Detail",
+       color = "No Go Frequency") +
+  theme_classic() +
+  guides(colour = guide_legend(override.aes = list(linewidth = 1)))
 
 
 # dprime ------------------------------------------------------------------
