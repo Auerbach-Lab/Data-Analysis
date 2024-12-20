@@ -15,6 +15,17 @@ Tsc2_rapamycin_treated_rats_group1 = # c(315, 316, 318, 319, 306, 311)
   .$rat_ID %>% # use rat_ID because its unique
   unique # de-duplicate
 
+
+## Group 2 ----
+Tsc2_rapamycin_treated_rats_group2 = # c(328, 330:332, 370, 381, 384:385)
+  # dynamically selected based on treatment dates
+  core_data %>%
+  filter(line == "Tsc2-LE") %>% # only Tsc2 rats are being treated so this speeds up
+  filter(date > 20241001) %>% # only Tsc2 rats are being treated so this speeds up
+  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)")) %>%
+  .$rat_ID %>% # use rat_ID because its unique
+  unique # de-duplicate
+
 # get list of rats with treatment
 Tsc2_rapamycin_treated_rats = 
   core_data %>%
@@ -268,8 +279,8 @@ Rap_rxn %>%
   ) 
 
 # Individual Graphs -------------------------------------------------------
-
-Individual_Graphs = 
+## Group 1----
+Individual_Graphs_Gp1 = 
   core_data %>%
   filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
   filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
@@ -323,4 +334,58 @@ Individual_Graphs =
   ) %>%
   arrange(name)
 
-Individual_Graphs[c(1:8),]$single_rat_graph
+Individual_Graphs_Gp1[c(1:8),]$single_rat_graph
+
+
+## Group 2 ----
+Individual_Graphs_Gp2 = 
+  core_data %>%
+  filter(rat_ID %in% Tsc2_rapamycin_treated_rats_group2) %>%
+  filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
+  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Post Vehicle",
+                       "Post Treatment", "3+w Post Treatment", "None")) %>%
+  filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
+  unnest(reaction) %>% 
+  filter(`Inten (dB)` >= 15) %>%
+  mutate(name = rat_name,
+         detail = factor(detail, ordered = TRUE,
+                         levels = c("None", "Vehicle (Tween 80)", "Post Vehicle", 
+                                    "Rapamycin (6mg/kg)", 
+                                    "Post Treatment", "3+w Post Treatment"),
+                         labels = c("Pre-Treatment", "Vehicle", "Post Vehicle",
+                                    "Rapamycin", "Recovery", "Post Treatment"))) %>%
+  group_by(rat_ID, name) %>%
+  do(single_rat_graph = 
+       ggplot(data = .,
+              aes(x = `Inten (dB)`, y = Rxn * 1000, color = detail)) +
+       stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+                    fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+                    fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+                    geom = "errorbar", position = position_dodge(0.5), width = 0) +
+       stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+                    geom = "point", position = position_dodge(0.5), size = 3) +
+       stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+                    geom = "line", position = position_dodge(0.5)) +
+       # geom_smooth(se = FALSE, na.rm = TRUE) +
+       labs(x = "Intensity (dB)",
+            y = "Reaction time (ms, mean +/- SE)",
+            color = "Treatment",
+            title = glue("{unique(.$rat_name)} ({unique(.$sex)}, {unique(.$genotype)})")) +
+       scale_color_manual(values = c("Pre-Treatment" = "black", 
+                                     "Vehicle" = "cyan", 
+                                     "Post Vehicle" = "darkblue",
+                                     "Rapamycin" = "red",
+                                     "Recovery" = "goldenrod",
+                                     "Post Treatment" = "forestgreen")) +
+       scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+       theme_classic() +
+       theme(
+         plot.title = element_text(hjust = 0.5),
+         panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+         # legend.position = "none"
+         # legend.position = c(.9,.85)
+       )
+  ) %>%
+  arrange(name)
+
+Individual_Graphs_Gp2[c(1:4, 7,8),]$single_rat_graph
