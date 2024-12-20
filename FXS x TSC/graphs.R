@@ -1,7 +1,7 @@
 # Load Data (optional) ----------------------------------------------------
 
 ## Load data ---
-source("main.R")
+source("data.R")
 
 ## Process data ---
 # source("data.R")
@@ -17,6 +17,14 @@ n_fun <- function(x){
 
 ## Group 1 ----
 Group1 = # c(745, 746, 747, 748)
+  # dynamically selected based on treatment dates
+  core_data %>%
+  filter(date > 20241001 & date < 20241201) %>% 
+  .$rat_ID %>% # use rat_ID because its unique
+  unique # de-duplicate
+
+## Group 1 ----
+Group2 = # c(745, 746, 747, 748)
   # dynamically selected based on treatment dates
   core_data %>%
   filter(date > 20241001 & date < 20241201) %>% 
@@ -111,3 +119,4 @@ Rxn_table %>%
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   ) 
+
