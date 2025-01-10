@@ -100,6 +100,16 @@ ggsave(file="Fmr1_SD_ABR_lat.jpg", path = "C:/Users/Noelle/Box/Behavior Lab/Shar
        plot = Ben_Lat_plot, 
        width = 10, height = 8, dpi = 600)
 
+
+# Thresholds --------------------------------------------------------------
+
+ABR_data_rat %>% 
+  summarise(TH = min(current_inten), 
+                           .by = c(rat_ID, genotype, current_freq)) %>% 
+  filter(current_freq == 0) %>% 
+  summarise(TH = mean(TH), n = n(), 
+            .by = c(genotype))
+
 # Wave ratios -------------------------------------------------------------
 
 W1_W4_ratio = 
