@@ -13,21 +13,22 @@ n_fun <- function(x){
 }
 
 
-# Get Treatment Group info ------------------------------------------------
+# Get Group info ----------------------------------------------------------
 
 ## Group 1 ----
 Group1 = # c(745, 746, 747, 748)
-  # dynamically selected based on treatment dates
+  # dynamically selected based on start date from October 2024
   core_data %>%
   filter(date > 20241001 & date < 20241201) %>% 
   .$rat_ID %>% # use rat_ID because its unique
   unique # de-duplicate
 
-## Group 1 ----
-Group2 = # c(745, 746, 747, 748)
-  # dynamically selected based on treatment dates
+## Group 2 ----
+Group2 = # c(769, 770, 772, 774) & c(744, 749, 771, 775)
+  # dynamically selected based on start date of January 2025
   core_data %>%
-  filter(date > 20241001 & date < 20241201) %>% 
+  filter(date > 20250101 & date < 20250112) %>% 
+  filter(! rat_ID %in% Group1) %>%
   .$rat_ID %>% # use rat_ID because its unique
   unique # de-duplicate
 
