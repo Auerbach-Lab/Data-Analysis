@@ -299,6 +299,14 @@ Discrimination_data %>%
   theme_classic() +
   guides(colour = guide_legend(override.aes = list(linewidth = 1)))
 
+## Holding FA & hit rate ----
+dataset %>%
+  filter(detail == "Normal") %>%
+  filter(task == "Holding") %>%
+  summarise(hit = mean(hit_percent, na.rm = TRUE),
+            FA = mean(FA_percent, na.rm = TRUE),
+            .by = c(rat_ID, rat_name, Genotype))
+
 
 # dprime ------------------------------------------------------------------
 
