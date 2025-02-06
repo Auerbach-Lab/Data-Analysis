@@ -40,6 +40,9 @@ TH_cutoff = 2.0
 # ABR directory
 ABR_data_folder = "C:/Users/Noelle/Box/ABR recordings/ABR Results/Fmr1 SD Rats/"
 
+# Box Folder
+Box_folder = "C:/Users/Noelle/Box"
+
 # Working directory -------------------------------------------------------
 setwd(code_folder)
 
@@ -47,6 +50,6 @@ setwd(code_folder)
 # Import Data -----------------------------------------
 # errors, post ABRs and 'maintenance' days are automatically removed
 cat("Loading data...")
-# source(glue("{code_folder}/data.R"))
+source(glue("{code_folder}/data.R"))
 cat("done\n")
 
