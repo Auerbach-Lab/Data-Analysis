@@ -14,7 +14,7 @@ rat_archive = fread(glue::glue("{projects_folder}/rat_archive.csv"), select = c(
 oddball_core_columns = c("date", "rat_name", "rat_ID", "Sex", "Genotype", "line", "genotype",
                         "file_name", "experiment", "phase", "task", "detail", 
                         "stim_type", "analysis_type", "complete_block_count", 
-                        "FA_detailed", "reaction", "FA_percent")
+                        "FA_detailed", "reaction", "FA_percent", "hit_percent")
 
 oddball_core_data = dataset %>% 
   # decode rats
@@ -409,3 +409,107 @@ oddball_CNO_graph =
   theme(legend.key.width = unit(1.5,"cm"))
 
 print(oddball_CNO_graph)
+
+## Fmr1 Group2 Rxn ----
+oddball_core_data %>%
+  # Omit Training & Reset days
+  dplyr::filter(! task %in% c("Training")) %>%
+  # only keep rats that have been treated with CNO
+  filter(rat_name %in% c("Green1", "Green2", "Green3", "Green4", "Lime5", "Purple5")) %>%
+  # only keep relevant trial types/days
+  filter(task %in% c("Base case")) %>%
+  filter(detail %in% c("Round 3", "CNO 3mg/kg")) %>%
+  # break into frequencies so that we can keep a set number
+  mutate(frequency = str_extract(file_name, pattern = "^[:digit:]+?(?=kHz)") %>% 
+           factor(levels = c("4", "8", "16", "32")),) %>% 
+  group_by(rat_ID, rat_name, genotype, frequency, task, detail) %>% 
+  do(arrange(., desc(date)) %>% 
+       # Select most recent days for each frequency and task
+       head(n = 5) %>% 
+       unnest(reaction) %>% 
+       rename(position = `Inten (dB)`))  %>%
+  ungroup %>%
+  summarise(reaction = mean(Rxn, na.rm = TRUE) * 1000,
+            .by = c(rat_ID, rat_name, frequency, genotype, task, detail, position)) %>%
+  group_by(rat_ID, rat_name, frequency, genotype, task, detail) %>% 
+  do(mutate(., reaction_norm = reaction/filter(., position == min(position))$reaction)) %>%
+  ungroup %>%
+  ggplot(aes(x = position, y = reaction_norm, 
+             linetype = detail, color = genotype,
+             group = interaction(detail, genotype))) +
+  stat_summary(geom = "line", fun = mean, linewidth = 2) +
+  stat_summary(aes(shape = genotype), geom = "point", fun = mean, size = 3, stroke = 3) +
+  scale_color_manual(values = c("WT" = "black", "KO"  = "darkred")) +
+  scale_linetype_manual(values = c("Round 3" = "solid", "CNO 3mg/kg" = "dotdash")) +
+  scale_x_continuous(breaks = seq(2, 6, by = 1)) +
+  labs(x = "Position of different 'go tone'",
+       y = "Reaction time\nNormalized by rat",
+       fill = "Treatment", color = "Genotype",
+       shape = "Genotype", linetype = "Treatment") +
+  theme_ipsum_es() +
+  guides(colour = guide_legend(override.aes = list(linewidth = 1))) +
+  theme(legend.key.width = unit(1.5,"cm"))
+  
+## Fmr1 Group2 FA ----
+oddball_core_data %>%
+  # Omit Training & Reset days
+  dplyr::filter(! task %in% c("Training")) %>%
+  # only keep rats that have been treated with CNO
+  filter(rat_name %in% c("Green1", "Green2", "Green3", "Green4", "Lime5", "Purple5")) %>%
+  # only keep relevant trial types/days
+  filter(task %in% c("Base case")) %>%
+  filter(detail %in% c("Round 3", "CNO 3mg/kg")) %>%
+  # break into frequencies so that we can keep a set number
+  mutate(frequency = str_extract(file_name, pattern = "^[:digit:]+?(?=kHz)") %>% 
+           factor(levels = c("4", "8", "16", "32")),) %>% 
+  group_by(rat_ID, rat_name, genotype, frequency, task, detail) %>% 
+  do(arrange(., desc(date)) %>% 
+       # Select most recent days for each frequency and task
+       head(n = 5) %>% 
+       unnest(FA_detailed))  %>%
+  ungroup %>%
+  summarise(FA = mean(FA_percent_detailed, na.rm = TRUE),
+            .by = c(rat_ID, rat_name, frequency, genotype, task, detail, position)) %>% 
+  ggplot(aes(x = position, y = FA, 
+             linetype = detail, color = genotype,
+             group = interaction(detail, genotype))) +
+  stat_summary(geom = "line", fun = mean, linewidth = 2) +
+  stat_summary(aes(shape = genotype), geom = "point", fun = mean, size = 3, stroke = 3) +
+  scale_color_manual(values = c("WT" = "black", "KO"  = "darkred")) +
+  scale_linetype_manual(values = c("Round 3" = "solid", "CNO 3mg/kg" = "dotdash")) +
+  scale_x_continuous(breaks = seq(2, 6, by = 1)) +
+  labs(x = "Position of different 'go tone'",
+       y = "Reaction time\nNormalized by rat",
+       fill = "Treatment", color = "Genotype",
+       shape = "Genotype", linetype = "Treatment") +
+  theme_ipsum_es() +
+  guides(colour = guide_legend(override.aes = list(linewidth = 1))) +
+  theme(legend.key.width = unit(1.5,"cm"))
+
+## Hit Rate by Genotype for CNO ----
+oddball_core_data %>%
+  # Omit Training & Reset days
+  dplyr::filter(! task %in% c("Training")) %>%
+  # only keep rats that have been treated with CNO
+  filter(rat_name %in% c("Green1", "Green2", "Green3", "Green4", "Lime5", "Purple5")) %>%
+  # only keep relevant trial types/days
+  filter(task %in% c("Base case")) %>%
+  filter(detail %in% c("Round 3", "CNO 3mg/kg")) %>%
+  group_by(rat_ID, rat_name, genotype, task, detail) %>% 
+  do(arrange(., desc(date)) %>% 
+       # Select most recent days for each frequency and task
+       head(n = 5))  %>%
+  ungroup %>%
+  summarise(hit = mean(hit_percent, na.rm = TRUE),
+            .by = c(rat_ID, rat_name, genotype, task, detail)) %>% 
+ggplot(aes(x = genotype, y = hit,
+          fill = detail,
+          group = interaction(detail, genotype))) +
+  geom_boxplot(linewidth = 1, width = 0.8) +
+  labs(x = "Genotype",
+       y = "Hit Rate",
+       fill = "Treatment", color = "Genotype",
+       shape = "Genotype", linetype = "Treatment") +
+  theme_ipsum_es() +
+  guides(colour = guide_legend(override.aes = list(linewidth = 1))) +
+  theme(legend.key.width = unit(1.5,"cm"))
