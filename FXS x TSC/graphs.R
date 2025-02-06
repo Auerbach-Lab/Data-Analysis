@@ -69,7 +69,9 @@ Individual_Graphs =
   ) %>%
   arrange(name)
 
-Individual_Graphs[c(1:4),]$single_rat_graph
+Individual_Graphs%>%
+  filter(rat_ID %in% Group1) %>%
+  .$single_rat_graph
 
 # TH Graph ----------------------------------------------------------------
 
