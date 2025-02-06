@@ -47,14 +47,16 @@ Tsc2_treatment_dates =
   arrange(rat_ID, date)
 
 
-# Piloting data checks ----------------------------------------------------
+# Vehicle data checks ----------------------------------------------------
 
 TH_table %>%
   filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
   filter(Duration == 50) %>%
-  filter(detail %in% c("Recheck", "Vehicle (Tween 80)", "Rapamycin (6mg/kg)", "None")) %>%
+  filter(detail %in% c("Recheck", "Vehicle (Tween 80)", "None", "Post Vehicle")) %>%
+  mutate(detail = str_replace(detail, ("Recheck|None"), "Baseline")) %>%
   reframe(TH = mean(TH, na.rm = TRUE),
-          .by = c(genotype, detail))
+          .by = c(genotype, detail)) %>%
+  arrange(genotype, detail)
 
 vehicle_check_rxn =
   core_data %>%
@@ -94,6 +96,7 @@ vehicle_check_rxn %>%
                                    "Rapamycin (6mg/kg)" = "solid")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  # facet_wrap(~ sex) +
   theme_classic() +
   theme(
     legend.position = c(.8,.85),
@@ -108,7 +111,9 @@ vehicle_check_rxn %>%
 TH_table %>%
   filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
   filter(Duration == 50) %>%
-  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Recheck", "Post Treatment")) %>%
+  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Recheck",
+                       "Post Treatment", "None")) %>%
+  mutate(detail = str_replace(detail, ("Recheck|None"), "Baseline")) %>%
   reframe(TH = mean(TH, na.rm = TRUE),
           .by = c(genotype, detail)) %>%
   arrange(genotype, detail)
@@ -152,6 +157,8 @@ TH_table %>%
     panel.grid.major.y = element_line(color = rgb(225, 225, 225, 255,
                                                   maxColorValue = 255))
   )
+
+print(TH_graph)
 
 ggsave(filename = "TH_rapa.jpg",
        plot = TH_graph,
@@ -344,7 +351,7 @@ Individual_Graphs_Gp2 =
   filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
   filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Post Vehicle",
                        "Post Treatment", "3+w Post Treatment", "None")) %>%
-  filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
+  # filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
   unnest(reaction) %>% 
   filter(`Inten (dB)` >= 15) %>%
   mutate(name = rat_name,
@@ -388,4 +395,4 @@ Individual_Graphs_Gp2 =
   ) %>%
   arrange(name)
 
-Individual_Graphs_Gp2[c(1:4, 7,8),]$single_rat_graph
+Individual_Graphs_Gp2[c(7,8, 1:4),]$single_rat_graph
