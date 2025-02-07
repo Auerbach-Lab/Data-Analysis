@@ -55,8 +55,10 @@ TH_table %>%
   filter(detail %in% c("Recheck", "Vehicle (Tween 80)", "None", "Post Vehicle")) %>%
   mutate(detail = str_replace(detail, ("Recheck|None"), "Baseline")) %>%
   reframe(TH = mean(TH, na.rm = TRUE),
+          n = length(unique(rat_ID)),
+          IDs = str_flatten_comma(unique(rat_name)),
           .by = c(genotype, detail)) %>%
-  arrange(genotype, detail)
+  arrange(detail, genotype)
 
 vehicle_check_rxn =
   core_data %>%
