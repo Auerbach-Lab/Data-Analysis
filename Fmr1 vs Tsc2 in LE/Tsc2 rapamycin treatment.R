@@ -98,7 +98,7 @@ vehicle_check_rxn %>%
                                    "Rapamycin (6mg/kg)" = "solid")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
-  # facet_wrap(~ sex) +
+  facet_wrap(~ sex) +
   theme_classic() +
   theme(
     legend.position = c(.8,.85),
@@ -107,48 +107,110 @@ vehicle_check_rxn %>%
   ) 
 
 
-# Rapamycin treatment -----------------------------------------------------
+# Rapamycin treatment 1 -----------------------------------------------------
 ## Threshold -----
 
-TH_table %>%
-  filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
-  filter(Duration == 50) %>%
-  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Recheck",
-                       "Post Treatment", "None")) %>%
-  mutate(detail = str_replace(detail, ("Recheck|None"), "Baseline")) %>%
-  reframe(TH = mean(TH, na.rm = TRUE),
-          .by = c(genotype, detail)) %>%
-  arrange(genotype, detail)
-
-## Threshold Graph -----
-
-TH_graph = 
-TH_table %>%
+### data ----
+TH_rapa_data = 
+  TH_table %>%
   filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
   filter(Duration == 50) %>%
   filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)",
-                       "Recheck", "Post Treatment", "None")) %>%
+                       "Recheck", "Post Treatment", "None", "3+w Post Treatment")) %>%
   mutate(detail = str_replace(detail, pattern = "None", replacement = "Recheck"),
          detail = factor(detail, levels = c("Recheck", "Vehicle (Tween 80)",
                                             "Rapamycin (6mg/kg)", 
-                                            "Post Treatment", "3+w Post Treatment",
-                                            "Rapamycin 2 (6mg/kg)"),
+                                            "Post Treatment", "3+w Post Treatment"),
                          labels = c("Baseline", "Vehicle", "Rapamycin",
-                                    "Recovery", "3+ weeks Post Treatment", "Rapamycin 2"))) %>%
-  ggplot(aes(x = genotype, y = TH, fill = genotype)) +
+                                    "Recovery", "Permanent")))
+
+TH_rapa_data %>%
+  reframe(TH = mean(TH, na.rm = TRUE),
+          .by = c(genotype, detail)) %>%
+  arrange(detail, genotype)
+
+### stats ----
+TH_rapa_aov = 
+  aov(TH ~ genotype * detail * sex,
+      data = TH_rapa_data)
+
+shapiro.test(TH_rapa_aov$residuals)$p.value
+
+summary(TH_rapa_aov)
+
+### TH Genotype * Sex ----
+aov(TH ~ genotype * sex,
+       data = TH_table %>%
+      filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
+      filter(Duration == 50) %>%
+      filter(detail %in% c("Vehicle (Tween 80)",
+                           "Recheck", "None")) %>%
+      mutate(detail = str_replace(detail, pattern = "None", replacement = "Recheck"),
+             detail = factor(detail, levels = c("Recheck", "Vehicle (Tween 80)",
+                                                "Rapamycin (6mg/kg)", 
+                                                "Post Treatment", "3+w Post Treatment"),
+                             labels = c("Baseline", "Vehicle", "Rapamycin",
+                                        "Recovery", "Permanent")))) %>%
+  TukeyHSD() %>%
+  tidy %>%
+  mutate(sig = gtools::stars.pval(adj.p.value))
+
+### TH Genotype * Sex Graph ----
+ggplot(data = TH_table %>%
+         filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
+         filter(Duration == 50) %>%
+         filter(detail %in% c("Vehicle (Tween 80)",
+                              "Recheck", "None")) %>%
+         mutate(detail = str_replace(detail, pattern = "None", replacement = "Recheck"),
+                detail = factor(detail, levels = c("Recheck", "Vehicle (Tween 80)",
+                                                   "Rapamycin (6mg/kg)", 
+                                                   "Post Treatment", "3+w Post Treatment"),
+                                labels = c("Baseline", "Vehicle", "Rapamycin",
+                                           "Recovery", "Permanent"))),
+       aes(x = genotype, y = TH, fill = genotype, color = sex)) +
   geom_boxplot(linewidth = 1, width = 0.8) +
   # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
-  # stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
-  #              position = position_dodge(1), vjust = 2, size = 3) +
+  stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE,
+               position = position_dodge(1), vjust = 2, size = 3) +
   labs(x = "",
        y = "Threshold (dB)",
-       fill = "Genotype") +
+       fill = "Genotype",
+       color = "Sex") +
+  scale_y_continuous(limits = c(19, 31), breaks = c(seq(18, 32, 2))) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "Het" = "deepskyblue", "KO" = "red")) +
+  theme_classic() +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 14, colour = "black"),
+    legend.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 14, colour = "black"),
+    axis.title = element_text(size = 18, face = "bold"),
+    panel.spacing = unit(0, "lines"),
+    panel.border = element_rect(color = "black", fill = NA, size = 1),
+    strip.text = element_text(size = 18, face = "bold"),
+    panel.grid.major.y = element_line(color = rgb(225, 225, 225, 255,
+                                                  maxColorValue = 255))
+  )
+
+
+### Threshold Graph -----
+TH_graph = 
+  ggplot(data = TH_rapa_data,
+         aes(x = genotype, y = TH, fill = genotype, color = sex)) +
+  geom_boxplot(linewidth = 1, width = 0.8) +
+  # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
+  stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE,
+               position = position_dodge(1), vjust = 2, size = 3) +
+  labs(x = "",
+       y = "Threshold (dB)",
+       fill = "Genotype",
+       color = "Sex") +
   scale_y_continuous(limits = c(19, 31), breaks = c(seq(18, 32, 2))) +
   scale_fill_manual(values = c("WT" = "darkgrey", "Het" = "deepskyblue", "KO" = "red")) +
   facet_wrap(~ detail, nrow = 1, strip.position = "top") +
   theme_classic() +
   theme(
-    legend.position = "none",
+    legend.position = "bottom",
     legend.text = element_text(size = 14, colour = "black"),
     legend.title = element_text(size = 18, face = "bold"),
     axis.text = element_text(size = 14, colour = "black"),
