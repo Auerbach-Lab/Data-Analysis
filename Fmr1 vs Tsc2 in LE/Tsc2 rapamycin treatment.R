@@ -233,7 +233,7 @@ Rap_rxn =
   core_data %>%
   filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
   filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
-  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Recheck",
+  filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)", "Recheck", "None",
                        "Post Treatment", "3+w Post Treatment", "Rapamycin 2 (6mg/kg)")) %>%
   filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
   left_join(Tsc2_treatment_dates %>% 
@@ -246,7 +246,8 @@ Rap_rxn =
   reframe(Rxn = mean(Rxn, na.rm = TRUE) * 1000,
           .by = c(rat_ID, rat_name, sex, genotype, line, detail,
                   `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`)) %>%
-  mutate(detail = factor(detail, levels = c("Recheck", "Vehicle (Tween 80)",
+  mutate(detail = str_replace(detail, pattern = "None", replacement = "Recheck"),
+         detail = factor(detail, levels = c("Recheck", "Vehicle (Tween 80)",
                                             "Rapamycin (6mg/kg)", 
                                             "Post Treatment", "3+w Post Treatment",
                                             "Rapamycin 2 (6mg/kg)"),
