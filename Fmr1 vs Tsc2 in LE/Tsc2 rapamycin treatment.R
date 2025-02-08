@@ -114,7 +114,8 @@ TH_table %>%
 
 
 ## Rxn Graph ====
-Rapa_rxn_data %>%
+Rapa_rxn_data_limited %>%
+  filter(! rat_name %in% c("Lime1", "Lime2")) %>%
   filter(detail %in% c("Baseline", "Vehicle")) %>%
   filter(`Inten (dB)` > 15) %>%
   ggplot(aes(x = `Inten (dB)`, y = Rxn, linetype = as.factor(detail),
@@ -133,13 +134,13 @@ Rapa_rxn_data %>%
   scale_linetype_manual(values = c("Baseline" = "solid", "Vehicle" = "dotted")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
-  # facet_wrap(~ sex) +
+  facet_wrap(~ sex) +
   theme_classic() +
   theme(
     legend.position = c(.8,.85),
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
-  ) 
+  )
 
 
 # Rapamycin treatment 1 -----------------------------------------------------
@@ -150,6 +151,7 @@ TH_rapa_data =
   TH_table %>%
   filter(rat_ID %in% Tsc2_rapamycin_treated_rats) %>%
   filter(Duration == 50) %>%
+  filter(rat_name != "Lime3") %>%
   filter(detail %in% c("Rapamycin (6mg/kg)", "Vehicle (Tween 80)",
                        "Recheck", "Post Treatment", "None", "3+w Post Treatment")) %>%
   mutate(detail = str_replace(detail, pattern = "None", replacement = "Recheck"),
@@ -268,7 +270,8 @@ ggsave(filename = "TH_rapa.jpg",
 
 Rxn_rapa_aov = 
   aov(Rxn ~ `Inten (dB)` * genotype * detail * sex,
-      data = Rapa_rxn_data %>%
+      data = Rapa_rxn_data_limited %>%
+        filter(rat_name != "Lime3") %>%
         filter(detail %in% c( "Baseline", "Vehicle", "Rapamycin", "Recovery", "Permanent")))
 
 shapiro.test(Rxn_rapa_aov$residuals)$p.value
@@ -280,7 +283,8 @@ summary(Rxn_rapa_aov)
 lapply(c("`Inten (dB)`", "genotype", "detail", "sex" # Main effects
 ), 
 function(x) kruskal.test(reformulate(x, "Rxn"),
-                         data = Rapa_rxn_data %>%
+                         data = Rapa_rxn_data_limited %>%
+                           filter(rat_name != "Lime3") %>%
                            filter(detail %in% c( "Baseline", "Vehicle", 
                                                  "Rapamycin", "Recovery", "Permanent")))) %>% 
   # Convert to table
@@ -293,6 +297,7 @@ function(x) kruskal.test(reformulate(x, "Rxn"),
 
 ### Graph -----
 Rapa_rxn_data_limited %>%
+  filter(rat_name != "Lime3") %>%
   filter(detail %in% c("Rapamycin", "Baseline")) %>%
   filter(`Inten (dB)` > 15) %>%
   ggplot(aes(x = `Inten (dB)`, y = Rxn, linetype = as.factor(detail),
@@ -312,7 +317,7 @@ Rapa_rxn_data_limited %>%
                                    "Rapamycin" = "longdash")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
-  # facet_wrap(~ sex) +
+  facet_wrap(~ sex) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
@@ -322,7 +327,7 @@ Rapa_rxn_data_limited %>%
 
 
 # WT graph ----------------------------------------------------------------
-Rapa_rxn_data %>%
+Rapa_rxn_data_limited %>%
   filter(genotype == "WT") %>%
   filter(detail %in% c( "Baseline", "Vehicle", "Rapamycin", "Recovery", "Permanent")) %>%
   filter(`Inten (dB)` > 15) %>%
@@ -354,7 +359,7 @@ Rapa_rxn_data %>%
 
 
 # Het graph ---------------------------------------------------------------
-Rapa_rxn_data %>%
+Rapa_rxn_data_limited%>%
   filter(genotype == "Het") %>%
   filter(detail %in% c( "Baseline", "Vehicle", "Rapamycin", "Recovery", "Permanent")) %>%
   filter(`Inten (dB)` > 15) %>%
