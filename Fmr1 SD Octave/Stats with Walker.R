@@ -61,6 +61,13 @@ ggplot(data = FA_stats_data_walker,
   theme_classic() +
   guides(colour = guide_legend(override.aes = list(linewidth = 1)))
 
+### Save ----
+# ggsave(file="FA_combined.svg",
+#        path = glue(Box_folder, 
+#                    "/tone_discrim_2024/final_docs"),
+#        plot = last_plot(),
+#        width=10, height=8)
+
 
 ## Stats ----
 
@@ -240,11 +247,11 @@ FA_bin_stats_data =
 
 ## Graph ----
 FA_bin_stats_data %>%
-  ggplot(aes(x = bin, y = FA_percent_detailed, fill = Genotype, group = interaction(bin, Genotype))) +
-  geom_boxplot() +
-  stat_summary(fun.data = n_fun, geom = "text", aes(color = Genotype),
-               show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 3) +
-  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  ggplot(aes(x = bin, y = FA_percent_detailed, fill = Genotype, color = Genotype,
+             group = interaction(bin, Genotype))) +
+  geom_boxplot(color = "black") +
+  geom_point(position = position_dodge(0.75)) +
+  scale_color_manual(values = c("WT" = "blue", "KO" = "violet")) +
   scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
   # facet_wrap(~ Type) +
   theme_classic() +
@@ -252,6 +259,13 @@ FA_bin_stats_data %>%
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
+
+### Save ----
+# ggsave(file="FA_binned.svg",
+#        path = glue(Box_folder,
+#                    "/tone_discrim_2024/final_docs"),
+#        plot = last_plot(),
+#        width=10, height=8)
 
 ## Stats ----
 FA_bin_aov =
