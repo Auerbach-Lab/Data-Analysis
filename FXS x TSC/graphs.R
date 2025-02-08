@@ -44,7 +44,7 @@ Individual_Graphs =
   do(single_rat_graph = 
        ggplot(data = .,
               aes(x = `Inten (dB)`, y = Rxn * 1000, 
-                  color = as.factor(`Dur (ms)`))) +
+                  color = as.factor(`Dur (ms)`), linetype = detail)) +
        stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                     fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
                     fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
@@ -57,6 +57,7 @@ Individual_Graphs =
        labs(x = "Intensity (dB)",
             y = "Reaction time (ms, mean +/- SE)",
             color = "Stim Duration",
+            linetype = "Exp. Detail",
             title = glue("{unique(.$rat_name)} ({unique(.$genotype)})")) +
        scale_x_continuous(breaks = seq(0, 90, by = 10)) +
        theme_classic() +
@@ -71,7 +72,7 @@ Individual_Graphs =
 
 Individual_Graphs%>%
   filter(rat_ID %in% Group1) %>%
-  filter(name %in% c("Orange3", "Orange4")) %>%
+  # filter(name %in% c("Orange3", "Orange4")) %>%
   .$single_rat_graph
 
 # TH Graph ----------------------------------------------------------------
