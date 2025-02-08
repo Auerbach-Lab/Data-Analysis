@@ -142,6 +142,33 @@ Rapa_rxn_data_limited %>%
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
 
+### stats ----
+Vehicle_rapa_aov = 
+  aov(Rxn ~ genotype * detail * sex,
+      data = Rapa_rxn_data_limited %>%
+        filter(! rat_name %in% c("Lime1", "Lime2")) %>%
+        filter(detail %in% c("Baseline", "Vehicle")))
+
+shapiro.test(Vehicle_rapa_aov$residuals)$p.value
+
+summary(Vehicle_rapa_aov)
+
+
+### Non-parametric ----
+# Kruskal Testing - Main effects only 
+lapply(c("`Inten (dB)`", "genotype", "detail", "sex" # Main effects
+), 
+function(x) kruskal.test(reformulate(x, "Rxn"),
+                         data = Rapa_rxn_data_limited %>%
+                           filter(! rat_name %in% c("Lime1", "Lime2")) %>%
+                           filter(detail %in% c("Baseline", "Vehicle")))) %>% 
+  # Convert to table
+  do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "bonf"),
+         sig = gtools::stars.pval(adj.p.value)) %>%
+  select(method, parameter, statistic, data.name, p.value, adj.p.value, sig)
+
 
 # Rapamycin treatment 1 -----------------------------------------------------
 ## Threshold -----
