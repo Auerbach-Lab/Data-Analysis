@@ -3,8 +3,10 @@ load(glue("{projects_folder}/run_archive.Rdata"), .GlobalEnv)
 rat_archive = fread(glue("{projects_folder}/rat_archive.csv"), 
                     select = c("Rat_ID", "DOB", "Sex", "Genotype", "HL_date"))
 
-# # Individual Trial Data
-# load(paste0(projects_folder, "TTS_archive.Rdata"), .GlobalEnv)
+# Individual Trial Data
+trials_data = fread(paste0(projects_folder, "Fmr1 SD_archive.csv.gz")) %>%
+  as.tibble()
+
 
 
 # Get core data -----------------------------------------------------------
@@ -91,6 +93,66 @@ n_fun <- function(x){
   # print(x)
   return(data.frame(y = min(x), label = paste0("n = ", length(x))))
 }
+
+
+# Trial counts ------------------------------------------------------------
+
+## Daily Trail Count by Freq --- 
+# trial_daily_count = 
+trials_data %>%
+  filter(UUID %in% (Discrimination_data$UUID)) %>%
+  left_join(Discrimination_data %>%
+              select(date, rat_ID, rat_name, Genotype, HL_state,
+                     task, detail, UUID, omit_list,
+                     Frequency, octave_fraction, octave_steps) %>%
+              unique(),
+            by = join_by("UUID", `Freq (kHz)` == Frequency)) %>%
+  # filter out omitted trials
+  group_by(UUID) %>% 
+  do(filter(., ! Trial_number %in% .$omit_list)) %>%
+  ungroup %>%
+  # Apply filters
+  filter(detail == "Normal") %>%
+  filter(HL_state == "baseline") %>%
+  filter(! is.na(octave_steps)) %>%
+  # get daily 
+  reframe(trial_count = n(),
+          Trial_type = unique(Trial_type),
+          .by = c(rat_ID, rat_name, Genotype, task, detail, 
+                  `Freq (kHz)`, octave_fraction, octave_steps)) %>%
+  # # get rat averages 
+  # reframe(avg_trial_count = mean(trial_count, na.rm = TRUE),
+  #         .by = c(rat_ID, rat_name, Genotype, task, detail, 
+  #                 `Freq (kHz)`, octave_fraction, octave_steps)) %>%
+  # Get Averages
+  summarise(avg_trial_count = mean(trial_count, na.rm = TRUE),
+            .by = c(Genotype, task, detail)) %>%
+  arrange(Genotype) %>%
+  print(n = 50)
+
+
+## Daily trials ----
+# trial_daily_stats = 
+  trials_data %>%
+  filter(UUID %in% (Discrimination_data$UUID)) %>%
+  left_join(Discrimination_data %>%
+              select(date, rat_ID, rat_name, Genotype, task, detail, UUID, omit_list) %>%
+              unique(),
+            by = "UUID") %>%
+  # filter out omitted trials
+  group_by(UUID) %>% 
+  do(filter(., ! Trial_number %in% .$omit_list)) %>%
+  ungroup %>%
+  # get daily 
+  reframe(trials = n(),
+          Trial_type = unique(Trial_type),
+          Rxn = mean(`Reaction_(s)`, na.rm = TRUE) * 1000,
+          delay = mean(`Delay (s)`, na.rm = TRUE),
+            .by = c(date, rat_ID, rat_name, Genotype, task, detail, `Freq (kHz)`, Response)) %>%
+  mutate(Freq_total_trials = sum(trials),
+         .by = c(date, rat_ID, rat_name, Genotype, task, detail, `Freq (kHz)`)) %>%
+  mutate(total_trials = sum(trials),
+         .by = c(date, rat_ID, rat_name, Genotype, task, detail))
 
 
 # Descriptive Stats -------------------------------------------------------
