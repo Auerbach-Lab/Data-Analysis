@@ -414,6 +414,25 @@ ggsave(filename = "Fmr1 SD d' for tone discrimination.svg",
 
 # Reaction time -----------------------------------------------------------
 
+## Holding Performance ----
+dataset %>% 
+  filter(task == "Holding") %>%
+  filter(detail == "Normal") %>%
+  # Select 1st 5 days on holding
+    group_by(rat_ID, rat_name, task, detail) %>%
+    do(arrange(., desc(date)) %>%
+         # Select most recent days for each frequency and task
+         tail(n = 5))  %>%
+    ungroup %>%
+  mutate(reaction = map_dbl(reaction, pluck, "Rxn")*1000) %>%
+  reframe(reaction = mean(reaction, na.rm = TRUE),
+          n = n(),
+          .by = c(rat_ID, rat_name, detail, Genotype)) %>%
+  reframe(reaction_avg = mean(reaction, na.rm = TRUE),
+          SD = sd(reaction, na.rm = TRUE),
+          SE = FSA::se(reaction, na.rm = TRUE),
+          .by = c(Genotype))
+
 Reaction_data = 
   Discrimination_data %>%
     # remove any duplicates caused by unnesting
