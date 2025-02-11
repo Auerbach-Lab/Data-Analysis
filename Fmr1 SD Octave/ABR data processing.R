@@ -17,7 +17,7 @@ ABR_data = left_join(ABR_single_csv %>%
 
 
 # Write our data ----------------------------------------------------------
-fwrite(ABR_data, glue("C:/Users/Noelle/Box/Behavior Lab/Shared/Walker/Fmr1_SD_ABR_data", str_remove_all(Sys.Date(), "-"),".csv"), row.names = FALSE)
+# fwrite(ABR_data, glue("C:/Users/Noelle/Box/Behavior Lab/Shared/Walker/Fmr1_SD_ABR_data", str_remove_all(Sys.Date(), "-"),".csv"), row.names = FALSE)
 
 
 # Prep data ---------------------------------------------------------------
