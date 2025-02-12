@@ -627,3 +627,315 @@ FSA::dunnTest(thresh ~ interaction(genotype, freq),
   # filter(! Sig %in% c(" ", ".")) %>%
   select(-Comp1, -Comp2, -date1)
 
+
+# AC modeling ----------------------------------------------------------------
+
+acx_model = fread(glue(code_folder,
+                       "acx_tone_io_params_stats.csv")) %>%
+  as_tibble()
+
+
+## Graph by channel ----
+acx_model %>%
+  ggplot(aes(x = channel, y = slope, 
+             fill = genotype, color = genotype, group = interaction(channel, genotype))) +
+  geom_boxplot(color = "black") +
+  geom_point(position = position_dodge(0.75)) +
+  scale_color_manual(values = c("WT" = "blue", "KO" = "violet")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  # facet_wrap(~ Type) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+## Graph by file ----
+acx_model %>%
+  ggplot(aes(x = file, y = slope, 
+             fill = genotype, color = genotype, group = interaction(file, genotype))) +
+  geom_boxplot(color = "black") +
+  geom_point(position = position_dodge(0.75)) +
+  scale_color_manual(values = c("WT" = "blue", "KO" = "violet")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  # facet_wrap(~ Type) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+## mixed graph ----
+acx_model %>%
+  pivot_longer(c(slope:y_max)) %>%
+  ggplot(aes(x = genotype, y = value, 
+             fill = genotype, color = genotype)) +
+  geom_boxplot(color = "black") +
+  geom_point(position = position_dodge(0.75)) +
+  scale_color_manual(values = c("WT" = "blue", "KO" = "violet")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  facet_wrap(~ name, scale = "free_y") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+
+## Stats ----
+wilcox.test(slope ~ genotype,
+            data =  acx_model)
+
+
+acx_model_aov =
+  aov(slope ~ genotype * channel,
+      data = acx_model %>%
+        mutate(Gaus = LambertW::Gaussianize(slope)))
+
+shapiro.test(acx_model_aov$residuals)$p.value
+
+summary(acx_model_aov)
+
+### Non-parametric ----
+# Kruskal Testing - Main effects only 
+lapply(c("slope", "threshold", "y_min", "y_max" # Main effects
+), 
+function(x) kruskal.test(reformulate("genotype", x),
+                         data = acx_model)) %>% 
+  # Convert to table
+  do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "BH"),
+         sig = gtools::stars.pval(adj.p.value)) %>%
+  select(method, parameter, statistic, data.name, p.value, adj.p.value, sig)
+
+### Post-Hoc Dunn's Test ----
+FSA::dunnTest(slope ~ interaction(genotype, file),
+              data = acx_model,
+              method = "bonf") %>%
+  .$res %>%
+  as_tibble() %>%
+  select(-P.unadj) %>%
+  mutate(Sig = gtools::stars.pval(P.adj),
+         Comp1 = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+         Comp2 = str_split_fixed(.$Comparison, ' - ', 2)[,2],
+         geno1 = str_split_fixed(Comp1, '\\.', 2)[,1],
+         date1 = str_split_fixed(Comp1, '\\.', 2)[,2] %>% as.numeric(),
+         geno2 = str_split_fixed(Comp2, '\\.', 2)[,1],
+         date2 = str_split_fixed(Comp2, '\\.', 2)[,2] %>% as.numeric()) %>%
+  # only compare within a sex (sib-sib direct comparison)
+  filter(date1 == date2) %>%
+  arrange(date1) %>%
+  rename(Channel = date2) %>%
+  # filter(! Sig %in% c(" ", ".")) %>%
+  select(-Comp1, -Comp2, -date1)
+
+# AC Gaus modeling ----------------------------------------------------------------
+acx__gaus_model = fread(glue(Box_folder,
+                       "/tone_discrim_2024/",
+                       "acx_gauss_paramsfra.csv")) %>%
+  as_tibble() %>%
+  rename(genotype = Genotype)
+
+
+## Graph ----
+acx__gaus_model %>%
+  ggplot(aes(x = channel, y = gain, 
+             fill = genotype, color = genotype, group = interaction(channel, genotype))) +
+  geom_boxplot(color = "black") +
+  geom_point(position = position_dodge(0.75)) +
+  scale_color_manual(values = c("WT" = "blue", "KO" = "violet")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  # facet_wrap(~ Type) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+## mixed graph ----
+acx__gaus_model %>%
+  filter(y_max < 150) %>%
+  pivot_longer(c(y_min:y_max, gain, range)) %>%
+  ggplot(aes(x = genotype, y = value, 
+             fill = genotype, color = genotype)) +
+  geom_boxplot(color = "black") +
+  geom_point(position = position_dodge(0.75)) +
+  scale_color_manual(values = c("WT" = "blue", "KO" = "violet")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  facet_wrap(~ name, scale = "free_y") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+
+## Stats ----
+wilcox.test(gain ~ genotype,
+            data =  acx__gaus_model)
+
+
+acx_model_gaus_aov =
+  aov(gain ~ genotype * channel,
+      data = acx__gaus_model %>%
+        mutate(Gaus = LambertW::Gaussianize(gain)))
+
+shapiro.test(acx_model_gaus_aov$residuals)$p.value
+
+summary(acx_model_gaus_aov)
+
+### Non-parametric ----
+# Kruskal Testing - Main effects only 
+lapply(c("gain", "range", "y_min", "y_max" # Main effects
+), 
+function(x) kruskal.test(reformulate("genotype", x),
+                         data = acx__gaus_model)) %>% 
+  # Convert to table
+  do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "BH"),
+         sig = gtools::stars.pval(adj.p.value)) %>%
+  select(method, parameter, statistic, data.name, p.value, adj.p.value, sig)
+
+### Post-Hoc Dunn's Test ----
+FSA::dunnTest(slope ~ interaction(genotype, channel),
+              data = acx__gaus_model,
+              method = "bonf") %>%
+  .$res %>%
+  as_tibble() %>%
+  select(-P.unadj) %>%
+  mutate(Sig = gtools::stars.pval(P.adj),
+         Comp1 = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+         Comp2 = str_split_fixed(.$Comparison, ' - ', 2)[,2],
+         geno1 = str_split_fixed(Comp1, '\\.', 2)[,1],
+         date1 = str_split_fixed(Comp1, '\\.', 2)[,2] %>% as.numeric(),
+         geno2 = str_split_fixed(Comp2, '\\.', 2)[,1],
+         date2 = str_split_fixed(Comp2, '\\.', 2)[,2] %>% as.numeric()) %>%
+  # only compare within a sex (sib-sib direct comparison)
+  filter(date1 == date2) %>%
+  arrange(date1) %>%
+  rename(Channel = date2) %>%
+  # filter(! Sig %in% c(" ", ".")) %>%
+  select(-Comp1, -Comp2, -date1)
+
+# IC Gaus modeling ----------------------------------------------------------------
+
+ic_model_gaus = fread(glue(Box_folder,
+                       "/tone_discrim_2024/",
+                       "ic_gauss_paramsfra.csv")) %>%
+  as_tibble() %>%
+  rename(genotype = Genotype)
+
+
+## Graph ----
+ic_model_gaus %>%
+  ggplot(aes(x = channel, y = gain, 
+             fill = genotype, color = genotype, group = interaction(channel, genotype))) +
+  geom_boxplot(color = "black") +
+  geom_point(position = position_dodge(0.75)) +
+  scale_color_manual(values = c("WT" = "blue", "KO" = "violet")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  # facet_wrap(~ Type) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+## mixed graph ----
+ic_model_gaus %>%
+  pivot_longer(c(y_min:y_max, gain, range)) %>%
+  ggplot(aes(x = genotype, y = value, 
+             fill = genotype, color = genotype)) +
+  geom_boxplot(color = "black") +
+  geom_point(position = position_dodge(0.75)) +
+  scale_color_manual(values = c("WT" = "blue", "KO" = "violet")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  facet_wrap(~ name, scale = "free_y") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+
+## Stats ----
+ic_model_gaus_aov =
+  aov(gain ~ genotype * channel,
+      data = ic_model_gaus %>%
+        mutate(Gaus = LambertW::Gaussianize(gain)))
+
+shapiro.test(ic_model_gaus_aov$residuals)$p.value
+
+summary(ic_model_gaus_aov)
+
+
+# IC modeling ----------------------------------------------------------------
+
+ic_model = fread(glue(Box_folder,
+                      "/tone_discrim_2024/",
+                      "ic_params_io_rlf_final.csv")) %>%
+  as_tibble()
+
+
+## Graph ----
+ic_model %>%
+  ggplot(aes(x = channel, y = slope, fill = genotype, color = genotype, 
+             group = interaction(channel, genotype))) +
+  geom_boxplot(color = "black") +
+  geom_point(position = position_dodge(0.75)) +
+  scale_color_manual(values = c("WT" = "blue", "KO" = "violet")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  # facet_wrap(~ Type) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+## mixed graph ----
+ic_model %>%
+  pivot_longer(c(slope:y_max)) %>%
+  ggplot(aes(x = genotype, y = value, 
+             fill = genotype, color = genotype)) +
+  geom_boxplot(color = "black") +
+  geom_point(position = position_dodge(0.75)) +
+  scale_color_manual(values = c("WT" = "blue", "KO" = "violet")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  facet_wrap(~ name, scale = "free_y") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+
+## Stats ----
+wilcox.test(slope ~ genotype,
+            data =  ic_model)
+
+
+IC_model_aov =
+  aov(slope ~ genotype * channel,
+      data = ic_model %>%
+        mutate(Gaus = LambertW::Gaussianize(slope)))
+
+shapiro.test(IC_model_aov$residuals)$p.value
+
+summary(IC_model_aov)
+
+### Non-parametric ----
+# Kruskal Testing - Main effects only 
+lapply(c("slope", "threshold", "y_min", "y_max" # Main effects
+), 
+function(x) kruskal.test(reformulate("genotype", x),
+                         data = acx_model)) %>% 
+  # Convert to table
+  do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "BH"),
+         sig = gtools::stars.pval(adj.p.value)) %>%
+  select(method, parameter, statistic, data.name, p.value, adj.p.value, sig)
+
+
