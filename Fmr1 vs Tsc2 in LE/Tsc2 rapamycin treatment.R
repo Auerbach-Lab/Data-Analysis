@@ -352,6 +352,65 @@ Rapa_rxn_data_limited %>%
     legend.position = c(.9,.85)
   ) 
 
+### Graph - Recovery -----
+Rapa_rxn_data_limited %>%
+  filter(rat_name != "Lime3") %>%
+  filter(detail %in% c("Recovery", "Baseline")) %>%
+  filter(`Inten (dB)` > 15) %>%
+  ggplot(aes(x = `Inten (dB)`, y = Rxn, linetype = as.factor(detail),
+             color = genotype, group = interaction(detail, genotype))) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1, position = position_dodge(0.5)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(0.5)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "line", position = position_dodge(0.5)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "Treatment") +
+  scale_linetype_manual(values = c("Baseline" = "solid", "Recovery" = "dotdash")) +
+  scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(~ sex) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    legend.position = c(.9,.85)
+  ) 
+
+### Graph - Permanent -----
+Rapa_rxn_data_limited %>%
+  filter(rat_name != "Lime3") %>%
+  filter(detail %in% c("Permanent", "Baseline")) %>%
+  filter(`Inten (dB)` > 15) %>%
+  ggplot(aes(x = `Inten (dB)`, y = Rxn, linetype = as.factor(detail),
+             color = genotype, group = interaction(detail, genotype))) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1, position = position_dodge(0.5)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(0.5)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "line", position = position_dodge(0.5)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "Treatment") +
+  scale_linetype_manual(values = c("Baseline" = "solid", "Permanent" = "twodash")) +
+  scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(~ sex) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    legend.position = c(.9,.85)
+  ) 
+
+
 
 # WT graph ----------------------------------------------------------------
 Rapa_rxn_data_limited %>%
