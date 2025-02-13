@@ -526,4 +526,4 @@ Individual_Graphs_Gp2 =
   ) %>%
   arrange(name)
 
-Individual_Graphs_Gp2[c(7,8, 1:4),]$single_rat_graph
+Individual_Graphs_Gp2[c(8, 1:4),]$single_rat_graph
