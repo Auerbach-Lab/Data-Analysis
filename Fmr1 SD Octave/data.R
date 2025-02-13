@@ -126,9 +126,34 @@ trials_data %>%
   #                 `Freq (kHz)`, octave_fraction, octave_steps)) %>%
   # Get Averages
   summarise(avg_trial_count = mean(trial_count, na.rm = TRUE),
+            SD = sd(trial_count, na.rm = TRUE),
+            SE = FSA::se(trial_count, na.rm = TRUE),
             .by = c(Genotype, task, detail)) %>%
-  arrange(Genotype) %>%
-  print(n = 50)
+  arrange(Genotype)
+
+### Stats -----
+t.test(trial_count ~ Genotype,
+       data = trials_data %>%
+         filter(UUID %in% (Discrimination_data$UUID)) %>%
+         left_join(Discrimination_data %>%
+                     select(date, rat_ID, rat_name, Genotype, HL_state,
+                            task, detail, UUID, omit_list,
+                            Frequency, octave_fraction, octave_steps) %>%
+                     unique(),
+                   by = join_by("UUID", `Freq (kHz)` == Frequency)) %>%
+         # filter out omitted trials
+         group_by(UUID) %>% 
+         do(filter(., ! Trial_number %in% .$omit_list)) %>%
+         ungroup %>%
+         # Apply filters
+         filter(detail == "Normal") %>%
+         filter(HL_state == "baseline") %>%
+         filter(! is.na(octave_steps)) %>%
+         # get daily 
+         reframe(trial_count = n(),
+                 Trial_type = unique(Trial_type),
+                 .by = c(rat_ID, rat_name, Genotype, task, detail, 
+                         `Freq (kHz)`, octave_fraction, octave_steps)))
 
 
 ## Daily trials ----
@@ -181,7 +206,6 @@ ggplot(aes(x = Genotype, y = value, fill = Genotype, group = Genotype)) +
   scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
   scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
   labs(x = "",
-       y = "Threshold (octave step)",
        fill = "Genotype") +
   facet_wrap(task ~ stat, scales = "free") +
   theme_classic() +
@@ -495,6 +519,12 @@ summarise(training_days_data,
           SD = sd(days, na.rm = TRUE),
           SE = FSA::se(days, na.rm = TRUE),
           .by = c(Genotype, detail))
+
+t.test(days ~ Genotype,
+       data = Training_data %>%
+         summarise(days = n(), Genotype = unique(Genotype),
+                   .by = c(rat_ID, detail)) %>%
+         filter(detail == "Normal"))
 
 training_days_data$Gaus = LambertW::Gaussianize(training_days_data$days)[, 1]
 
