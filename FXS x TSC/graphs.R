@@ -71,8 +71,8 @@ Individual_Graphs =
   arrange(name)
 
 Individual_Graphs%>%
-  filter(rat_ID %in% Group1) %>%
-  # filter(name %in% c("Orange3", "Orange4")) %>%
+  # filter(rat_ID %in% Group1) %>%
+  filter(name %in% c("Orange2", "Orange3", "Orange4", "Orange5")) %>%
   .$single_rat_graph
 
 # TH Graph ----------------------------------------------------------------
