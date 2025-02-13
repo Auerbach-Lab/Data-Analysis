@@ -295,6 +295,14 @@ t.test(FA_percent_detailed ~ Genotype,
          filter(bin == "Mid"))
 
 
+FA_bin_stats_data %>%
+  group_by(bin) %>%
+  do(t.test(FA_percent_detailed ~ Genotype,
+            data = .) %>% tidy()) %>%
+  mutate(adj.p.value = p.adjust(p.value, method = "bonferroni", n = 3)) %>%
+  relocate(adj.p.value, .after = p.value)
+  
+
 # ABR thresholds ----------------------------------------------------------
 
 walker_ABR_data = fread(glue(Box_folder, 
