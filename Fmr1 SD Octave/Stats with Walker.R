@@ -1,5 +1,7 @@
+
+# Data --------------------------------------------------------------------
 walker_data = fread(glue("C:/Users/Noelle/Box/Behavior Lab/Shared/Walker/Fmr1_SD_Octave_20240426.csv"))
-walker_data1 = fread(glue("C:/Users/Noelle/Box/tone_discrim_2024/final_docs/csvs_for_stats_check/updated_versions/octave_stats_plot_works.csv"))
+walker_data1 = fread(glue("C:/Users/Noelle/Box/tone_discrim_2024/final_docs/csvs_for_stats_check/octave_stats_plot_works.csv"))
 
 # FA% ---------------------------------------------------------------------
 ## Data ----
