@@ -79,25 +79,6 @@ Individual_Graphs%>%
 
 # TH Graph ----------------------------------------------------------------
 
-## TH by Duration ----
-TH_table %>%
-  mutate(Duration = as.factor(Duration)) %>%
-  ggplot(aes(x = genotype, y = TH,
-             fill = genotype, group = genotype)) +
-  geom_boxplot(position = position_dodge(1), linewidth = 1, width = 0.8) +
-  # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
-  stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
-               position = position_dodge(1), vjust = 2, size = 3) +
-  labs(x = "",
-       y = "Threshold (dB, mean +/- SE)",
-       fill = "Genotype") +
-  facet_wrap( ~ Duration, ncol = 5, scales = "free_x") +
-  theme_classic() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
-  )
-
 ## TH by Genotype ----
 TH_table %>%
   mutate(Duration = as.factor(Duration)) %>%
@@ -107,10 +88,33 @@ TH_table %>%
   # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
   stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
                position = position_dodge(1), vjust = 2, size = 3) +
+  scale_fill_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
+                               "TSC only" = "deepskyblue", "Fmr1 only" = "red")) +
   labs(x = "",
        y = "Threshold (dB, mean +/- SE)",
        fill = "Genotype") +
   facet_wrap( ~ genotype, ncol = 5, scales = "free_x") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+## TH by Duration ----
+TH_table %>%
+  mutate(Duration = as.factor(Duration)) %>%
+  ggplot(aes(x = genotype, y = TH,
+             fill = genotype, group = genotype)) +
+  geom_boxplot(position = position_dodge(1), linewidth = 1, width = 0.8) +
+  # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
+  stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
+               position = position_dodge(1), vjust = 2, size = 3) +
+  scale_fill_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
+                                "TSC only" = "deepskyblue", "Fmr1 only" = "red")) +
+  labs(x = "",
+       y = "Threshold (dB, mean +/- SE)",
+       fill = "Genotype") +
+  facet_wrap( ~ Duration, ncol = 5, scales = "free_x") +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
