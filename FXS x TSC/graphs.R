@@ -152,3 +152,32 @@ Rxn_table %>%
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   ) 
 
+## Temporal Integration ----
+Rxn_table %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
+  filter(Intensity >= 20) %>%
+  # filter(! str_detect(Intensity, pattern = "5$")) %>%
+  ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(Duration),
+             color = genotype, group = interaction(Duration, genotype))) +
+  ## Lines for each group
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1.5, position = position_dodge(1)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(1), size = 3) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "line", position = position_dodge(1)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "") +
+  scale_color_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
+                                "TSC only" = "deepskyblue", "FXS only" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(~ genotype) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
+
