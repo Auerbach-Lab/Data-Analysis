@@ -225,9 +225,6 @@ Probe_table %>%
 ## Hit/Miss/FA overall ----
 AC_Model_data %>%
   filter(task == "Base case") %>%
-  mutate(detail = factor(detail, 
-                         levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-         Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
   reframe(percent = mean(percent, na.rm = TRUE),
          .by = c(rat_ID, rat_name, Genotype, Sex, 
                  task, detail, go, Response)) %>%
@@ -245,9 +242,6 @@ AC_Model_data %>%
 ## Hit graph ----
 AC_Model_data_by_position %>%
   filter(task == "Base case" & Response == "Hit") %>%
-  mutate(detail = factor(detail, 
-                         levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-         Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
   reframe(percent = mean(percent, na.rm = TRUE),
           .by = c(rat_ID, rat_name, Genotype, Sex, 
                   task, detail, go, Position)) %>%
@@ -273,9 +267,6 @@ AC_Model_data_by_position %>%
 ## FA graph ----
 AC_Model_data_by_position %>%
   filter(task == "Base case" & Response == "FA") %>%
-  mutate(detail = factor(detail, 
-                         levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-         Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
   reframe(percent = mean(percent, na.rm = TRUE),
           .by = c(rat_ID, rat_name, Genotype, Sex, 
                   task, detail, go, Position)) %>%
@@ -300,9 +291,6 @@ AC_Model_data_by_position %>%
 ## Miss graph ----
 AC_Model_data_by_position %>%
   filter(task == "Base case" & Response == "Miss") %>%
-  mutate(detail = factor(detail, 
-                         levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-         Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
   reframe(percent = mean(percent, na.rm = TRUE),
           .by = c(rat_ID, rat_name, Genotype, Sex, 
                   task, detail, go, Position)) %>%
@@ -324,12 +312,27 @@ AC_Model_data_by_position %>%
   facet_wrap(~ Genotype, ncol = 2) +
   theme_light()
 
+## Hit/FA Reaction times overall ----
+AC_Model_data %>%
+  filter(task == "Base case") %>%
+  filter(Response != "Miss") %>%
+  reframe(reaction = mean(Rxn, na.rm = TRUE),
+          .by = c(rat_ID, rat_name, Genotype, Sex, 
+                  task, detail, go, Response)) %>%
+  ggplot(aes(x = Genotype, y = reaction,
+             fill = detail,
+             group = interaction(detail, Genotype))) +
+  geom_boxplot() +
+  labs(x = "Genotype",
+       y = "Percent",
+       fill = "Treatment", color = "Genotype",
+       shape = "Genotype", linetype = "Treatment") +
+  facet_wrap(~ Response, ncol = 1, scales = "free_y") +
+  theme_light()
+
 ## Hit reaction times ----
 AC_Model_data_by_position %>%
   filter(task == "Base case" & Response == "Hit") %>%
-  mutate(detail = factor(detail, 
-                         levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-         Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
   reframe(Rxn = mean(Rxn, na.rm = TRUE),
           .by = c(rat_ID, rat_name, Genotype, Sex, 
                   task, detail, Position)) %>%
@@ -358,10 +361,7 @@ AC_Model_data_by_position %>%
 ## FA density reaction times ----
 AC_FA_data %>%
   filter(task == "Base case" & Response == "FA") %>%
-  mutate(detail = factor(detail, 
-                         levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-         Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
-  filter(detail %in% c("Round 2", "CNO 3mg/kg")) %>%
+  filter(detail %in% c("Baseline", "CNO 3mg/kg")) %>%
   ggplot(aes(x = `Reaction_(s)`, color = Genotype, linetype = detail)) +
   geom_rect(aes(xmin = 2.25, xmax = 3, ymin = -Inf, ymax = Inf), 
             fill = "lightgrey", color = "lightgrey", show.legend = FALSE) + # position 6
@@ -382,9 +382,6 @@ AC_FA_data %>%
 ## all FA density reaction times ----
 AC_FA_data %>%
   filter(task == "Base case" & Response == "FA") %>%
-  mutate(detail = factor(detail, 
-                         levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-         Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
   # filter(detail == "Round 1") %>%
   ggplot(aes(x = `Reaction_(s)`, y = Genotype, color = Genotype)) +
   geom_rect(aes(xmin = 2.25, xmax = 3, ymin = -Inf, ymax = Inf), 
