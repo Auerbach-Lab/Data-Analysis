@@ -267,7 +267,8 @@ FXS_core_baseline_data =
   filter(Response == "Hit") %>%
   filter(task == "Base case") %>%
   # select only baselines
-  filter(str_detect(detail, pattern = "(4-6|Round [:digit:])"))
+  filter(str_detect(detail, pattern = "(4-6|Round [:digit:])")) %>%
+  mutate(Genotype = str_remove(Genotype, pattern = "Fmr1-LE_"))
 
 FXS_core_baseline_data_trial_count = 
   FXS_core_baseline_data %>%

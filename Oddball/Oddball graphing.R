@@ -112,6 +112,21 @@ individual_graphs = Rxn %>%
 individual_graphs$plot
 
 # Rxn for Base case by genotype -------------------------------------------
+# FXS Rxn for Base case by genotype -------------------------------------------
+FXS_baseline_hit_reaction %>%
+  mutate(group = case_when(rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 ~ "Group 2",
+                           .default = "Unknown")) %>%
+  # filter(rat_ID < 300) %>%
+  ggplot(aes(x = Genotype, y = Rxn,
+             fill = Genotype, group = Genotype)) +
+  geom_boxplot() +
+  geom_point(aes(group = rat_ID)) +
+  labs(x = "Genotype",
+       y = "Reaction time (ms)",
+       fill = "Genotype", color = "Genotype") +
+  theme_light() +
+  theme(legend.position = "none")
 
 Rxn_table %>%
   filter(str_detect(Genotype, pattern = "Fmr1")) %>%
