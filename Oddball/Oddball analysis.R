@@ -260,6 +260,7 @@ Rxn_table = Daily_summary_from_trials_by_position %>%
 
 
 # Reaction for FXS baseline -----------------------------------------------
+## Overall -----
 FXS_core_baseline_data = 
   Daily_summary_from_trials %>%
   filter(str_detect(Genotype, pattern = "Fmr1")) %>%
@@ -300,9 +301,8 @@ FXS_baseline_hit_reaction =
           n = n(),
           .by = c(rat_ID, rat_name, Sex, Genotype))
 
-## Stats ----
+### Stats ----
 wilcox.test(Rxn ~ Genotype, data = FXS_baseline_hit_reaction)
-
 
 # DREADD testing (PFC) ----------------------------------------------------------
 
