@@ -535,6 +535,66 @@ FSA::dunnTest(percent ~ interaction(Genotype, detail),
   # filter(! Sig %in% c(" ", ".")) %>%
   select(-Comp1, -Comp2)
 
+## Hit by position ----
+Hit_position_AC_aov = 
+  aov(percent ~ detail * Genotype,
+      data = AC_Model_data_by_position %>%
+        filter(task == "Base case") %>%
+        reframe(percent = mean(percent, na.rm = TRUE),
+                .by = c(rat_ID, rat_name, Genotype, Sex, 
+                        task, detail, go, Response, Position)) %>%
+        filter(Response == "Hit"))
+
+Parametric_Check(Hit_position_AC_aov)
+
+summary(Hit_position_AC_aov)
+
+#### Non-parametric ----
+# Kruskal Testing - Main effects only 
+lapply(c("Genotype", "detail", "Position" # Main effects
+), 
+function(x) kruskal.test(reformulate(x, "percent"),
+                         data = AC_Model_data_by_position %>%
+                           filter(task == "Base case") %>%
+                           reframe(percent = mean(percent, na.rm = TRUE),
+                                   .by = c(rat_ID, rat_name, Genotype, Sex, 
+                                           task, detail, go, Response, Position)) %>%
+                           filter(Response == "Hit"))) %>% 
+  # Convert to table
+  do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "bonf"),
+         sig = gtools::stars.pval(adj.p.value)) %>%
+  select(method, parameter, statistic, data.name, p.value, adj.p.value, sig)
+
+#### Post-Hoc Dunn's Test ----
+FSA::dunnTest(percent ~ interaction(Genotype, detail, Position),
+              data = AC_Model_data_by_position %>%
+                filter(task == "Base case") %>%
+                reframe(percent = mean(percent, na.rm = TRUE),
+                        .by = c(rat_ID, rat_name, Genotype, Sex, 
+                                task, detail, go, Response, Position)) %>%
+                filter(Response == "Hit"),
+              method = "bonf") %>%
+  .$res %>%
+  as_tibble() %>%
+  select(-P.unadj) %>%
+  mutate(Sig = gtools::stars.pval(P.adj),
+         Comp1 = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+         Comp2 = str_split_fixed(.$Comparison, ' - ', 2)[,2],
+         geno1 = str_split_fixed(Comp1, '\\.', 3)[,1],
+         detail1 = str_split_fixed(Comp1, '\\.', 3)[,2],
+         position1 = str_split_fixed(Comp1, '\\.', 3)[,3],
+         geno2 = str_split_fixed(Comp2, '\\.', 3)[,1],
+         detail2 = str_split_fixed(Comp2, '\\.', 3)[,2],
+         position2 = str_split_fixed(Comp1, '\\.', 3)[,3]) %>%
+  # only compare within a sex (sib-sib direct comparison)
+  filter(geno1 == geno2) %>%
+  filter(position1 == position2) %>%
+  # filter(! Sig %in% c(" ", ".")) %>%
+  select(-Comp1, -Comp2) %>%
+  print(n = 20)
+
 ## Power analysis ----
 ### hit ----
 AC_Model_data %>%
