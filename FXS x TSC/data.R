@@ -11,32 +11,11 @@ Calculate_TH <- function(df) {
   rat_name = unique(df$rat_name)
   Freq = unique(df$Freq)
   Dur = unique(df$Dur)
-  step_size = if(is.null(df$step_size)) "All data" else glue("{unique(df$step_size)}dB step size")
+  # step_size = if(is.null(df$step_size)) "All data" else glue("{unique(df$step_size)}dB step size")
   
-  ## Default model ----------------------------------------------------------
-  # fit = loess(dprime ~ dB, data = df)
-  # TH = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff, ties = "ordered")$y
-  
-  # # Get TH point (it needs inverting for some reason)
-  # TH_point = approx(x = fit$fitted, y = fit$x, xout = TH_cutoff, ties = "ordered")
-  # TH_x = TH_point$y
-  # TH_y = TH_point$x
-  
-  # # Actually plot
-  # plot(fit,
-  #      main = glue("{rat_name} @ {Freq}kHz & {Dur}ms {step_size} TH: {round(TH, digits = 1)}"),
-  #      sub = glue("TH: x = {TH_x}"))
-  # # added fitted line
-  # lines(fit$x, predict(fit), col = "green")
-  # # add TH point to plot
-  # points(TH_x, TH_y, col="red")
-  # # add line to plot
-  # abline(h=1.5, col="blue")
-  # # Save
-  # dev.copy(png,
-  #          glue("C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Rollout Issues/dprime plots/{rat_name} {Freq}kHz {Dur}ms {step_size}.png"))
-  # dev.off()
-  
+  # print(rat_name)
+  # print(df)
+
   ## DRDA Model ---------------------------------------------------------------
   # Dose-dependant curve which suggests 4-parameter logistic function is best fit
   fit_drda = drda(dprime ~ dB, data = df)
@@ -66,7 +45,21 @@ TH_table = core_data %>%
   # Sort for ordered
   arrange(rat_ID, rat_name, Freq, Dur, dB) %>%
   #Prep for Calculate_TH function
-  nest(data = c(rat_name, Freq, Dur, dB, dprime), .by = c(rat_ID, rat_name, sex, genotype, detail, Freq, Dur)) %>% 
+  nest(data = c(rat_name, Freq, Dur, dB, dprime), .by = c(rat_ID, rat_name, sex, phase, task, genotype, Freq, Dur)) %>% 
+  mutate(TH = map_dbl(data, Calculate_TH)) %>%
+  select(-data) 
+
+TH_table_detail = core_data %>%
+  # Omit Training & Reset days
+  filter(! task %in% c("Training", "Reset")) %>%
+  # Omit days with > 45% FA, i.e. guessing
+  filter(FA_percent < FA_cutoff) %>%
+  # Get dprimes
+  unnest(dprime) %>%
+  # Sort for ordered
+  arrange(rat_ID, rat_name, Freq, Dur, dB) %>%
+  #Prep for Calculate_TH function
+  nest(data = c(rat_name, Freq, Dur, dB, dprime), .by = c(rat_ID, rat_name, sex, genotype, phase, task, detail, Freq, Dur)) %>% 
   mutate(TH = map_dbl(data, Calculate_TH)) %>%
   select(-data) 
 
@@ -82,7 +75,7 @@ Rxn_table = core_data %>%
   # Get Reaction times:
   unnest(reaction) %>%
   # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, sex, genotype, detail, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`) %>%
+  group_by(rat_ID, rat_name, sex, genotype, phase, task, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`) %>%
   # Get Averages
   transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>% 
   unique()
@@ -110,7 +103,7 @@ Rxn_table_over_TH = Rxn_table %>%
   # Prep for TH_filter function
   ungroup() %>%
   mutate(ID = rat_ID, Dur = `Dur (ms)`, Freq = `Freq (kHz)`, Inten = `Inten (dB)`) %>%
-  nest(data = c(ID, Freq, Dur, Inten, Rxn), .by = c(rat_ID, rat_name, sex, genotype, detail, `Freq (kHz)`, `Dur (ms)`)) %>%
+  nest(data = c(ID, Freq, Dur, Inten, Rxn), .by = c(rat_ID, rat_name, sex, genotype, phase, task, `Freq (kHz)`, `Dur (ms)`)) %>%
   # Apply TH_filter
   mutate(data = map(data, TH_filter)) %>%
   unnest(data) %>%
