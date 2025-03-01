@@ -595,6 +595,77 @@ FSA::dunnTest(percent ~ interaction(Genotype, detail, Position),
   select(-Comp1, -Comp2) %>%
   print(n = 20)
 
+## Reaction time -----
+### Overall -----
+Rxn_AC_aov = 
+  aov(reaction ~ detail * Genotype,
+      data = AC_Model_data %>%
+        filter(task == "Base case") %>%
+        filter(Response != "Miss") %>%
+        reframe(reaction = mean(Rxn, na.rm = TRUE),
+                .by = c(rat_ID, rat_name, Genotype, Sex, 
+                        task, detail, go, Response)) %>%
+        filter(Response == "Hit"))
+
+Parametric_Check(Rxn_AC_aov)
+
+summary(Rxn_AC_aov)
+
+#### Non-parametric ----
+# Kruskal Testing - Main effects only 
+lapply(c("Genotype", "detail" # Main effects
+), 
+function(x) kruskal.test(reformulate(x, "reaction"),
+                         data = AC_Model_data %>%
+                           filter(task == "Base case") %>%
+                           filter(Response != "Miss") %>%
+                           reframe(reaction = mean(Rxn, na.rm = TRUE),
+                                   .by = c(rat_ID, rat_name, Genotype, Sex, 
+                                           task, detail, go, Response)) %>%
+                           filter(Response == "Hit"))) %>% 
+  # Convert to table
+  do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "bonf"),
+         sig = gtools::stars.pval(adj.p.value)) %>%
+  select(method, parameter, statistic, data.name, p.value, adj.p.value, sig)
+
+#### Post-Hoc Dunn's Test ----
+FSA::dunnTest(reaction ~ interaction(Genotype, detail),
+              data = AC_Model_data %>%
+                filter(task == "Base case") %>%
+                filter(Response != "Miss") %>%
+                reframe(reaction = mean(Rxn, na.rm = TRUE),
+                        .by = c(rat_ID, rat_name, Genotype, Sex, 
+                                task, detail, go, Response)) %>%
+                filter(Response == "Hit"),
+              method = "bonf") %>%
+  .$res %>%
+  as_tibble() %>%
+  select(-P.unadj) %>%
+  mutate(Sig = gtools::stars.pval(P.adj),
+         Comp1 = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+         Comp2 = str_split_fixed(.$Comparison, ' - ', 2)[,2],
+         geno1 = str_split_fixed(Comp1, '\\.', 2)[,1],
+         detail1 = str_split_fixed(Comp1, '\\.', 2)[,2],
+         geno2 = str_split_fixed(Comp2, '\\.', 2)[,1],
+         detail2 = str_split_fixed(Comp2, '\\.', 2)[,2]) %>%
+  # only compare within a sex (sib-sib direct comparison)
+  filter(geno1 == geno2) %>%
+  # filter(! Sig %in% c(" ", ".")) %>%
+  select(-Comp1, -Comp2)
+
+#### KO vs. WT ----
+wilcox.test(reaction ~ Genotype,
+            data = AC_Model_data %>%
+              filter(task == "Base case") %>%
+              filter(Response == "Hit") %>%
+              filter(detail == "Baseline") %>%
+              reframe(reaction = mean(Rxn, na.rm = TRUE),
+                      .by = c(rat_ID, rat_name, Genotype, Sex, 
+                              task, detail, go, Response)) ) 
+
+
 ## Power analysis ----
 ### hit ----
 AC_Model_data %>%
