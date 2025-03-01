@@ -122,6 +122,8 @@ FXS_baseline_hit_reaction %>%
              fill = Genotype, group = Genotype)) +
   geom_boxplot() +
   geom_point(aes(group = rat_ID)) +
+  geom_segment(aes(y = 322, yend = 322, x = "KO", xend = "WT")) +
+  geom_text(aes(y = 325, label = "n.s.", x = "KO"), nudge_x = 0.5) +
   labs(x = "Genotype",
        y = "Reaction time (ms)",
        fill = "Genotype", color = "Genotype") +

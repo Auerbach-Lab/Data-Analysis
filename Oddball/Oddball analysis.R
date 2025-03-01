@@ -300,6 +300,9 @@ FXS_baseline_hit_reaction =
           n = n(),
           .by = c(rat_ID, rat_name, Sex, Genotype))
 
+## Stats ----
+wilcox.test(Rxn ~ Genotype, data = FXS_baseline_hit_reaction)
+
 
 # DREADD testing (PFC) ----------------------------------------------------------
 
