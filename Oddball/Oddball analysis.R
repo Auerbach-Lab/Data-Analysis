@@ -363,7 +363,7 @@ FA_AC_aov =
     data = AC_Model_data %>%
       filter(task == "Base case") %>%
       mutate(detail = factor(detail, 
-                             levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
+                             levels = c("Baseline", "Between Treatment", "CNO 3mg/kg")),
              Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
       reframe(percent = mean(percent, na.rm = TRUE),
               .by = c(rat_ID, rat_name, Genotype, Sex, 
@@ -374,6 +374,8 @@ Parametric_Check(FA_AC_aov)
 
 summary(FA_AC_aov)
 
+
+
 #### Non-parametric ----
 # Kruskal Testing - Main effects only 
 lapply(c("Genotype", "detail" # Main effects
@@ -381,9 +383,6 @@ lapply(c("Genotype", "detail" # Main effects
 function(x) kruskal.test(reformulate(x, "percent"),
                          data = AC_Model_data %>%
                            filter(task == "Base case") %>%
-                           mutate(detail = factor(detail, 
-                                                  levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-                                  Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
                            reframe(percent = mean(percent, na.rm = TRUE),
                                    .by = c(rat_ID, rat_name, Genotype, Sex, 
                                            task, detail, go, Response)) %>%
@@ -399,9 +398,6 @@ function(x) kruskal.test(reformulate(x, "percent"),
 FSA::dunnTest(percent ~ interaction(Genotype, detail),
               data = AC_Model_data %>%
                 filter(task == "Base case") %>%
-                mutate(detail = factor(detail, 
-                                       levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-                       Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
                 reframe(percent = mean(percent, na.rm = TRUE),
                         .by = c(rat_ID, rat_name, Genotype, Sex, 
                                 task, detail, go, Response)) %>%
@@ -427,9 +423,6 @@ Hit_AC_aov =
   aov(percent ~ detail * Genotype,
       data = AC_Model_data %>%
         filter(task == "Base case") %>%
-        mutate(detail = factor(detail, 
-                               levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-               Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
         reframe(percent = mean(percent, na.rm = TRUE),
                 .by = c(rat_ID, rat_name, Genotype, Sex, 
                         task, detail, go, Response)) %>%
@@ -446,9 +439,6 @@ lapply(c("Genotype", "detail" # Main effects
 function(x) kruskal.test(reformulate(x, "percent"),
                          data = AC_Model_data %>%
                            filter(task == "Base case") %>%
-                           mutate(detail = factor(detail, 
-                                                  levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-                                  Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
                            reframe(percent = mean(percent, na.rm = TRUE),
                                    .by = c(rat_ID, rat_name, Genotype, Sex, 
                                            task, detail, go, Response)) %>%
@@ -464,9 +454,6 @@ function(x) kruskal.test(reformulate(x, "percent"),
 FSA::dunnTest(percent ~ interaction(Genotype, detail),
               data = AC_Model_data %>%
                 filter(task == "Base case") %>%
-                mutate(detail = factor(detail, 
-                                       levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-                       Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
                 reframe(percent = mean(percent, na.rm = TRUE),
                         .by = c(rat_ID, rat_name, Genotype, Sex, 
                                 task, detail, go, Response)) %>%
@@ -512,7 +499,7 @@ lsr::cohensD(AC_Model_data %>%
                        .by = c(rat_ID, rat_name, Genotype, Sex, 
                                task, detail, Response)) %>%
                # filter(detail == "Between Treatment") %>%
-               filter(detail == "Round 2") %>%
+               filter(detail == "Baseline") %>%
                .$percent,
              AC_Model_data %>%
                filter(task == "Base case") %>%
