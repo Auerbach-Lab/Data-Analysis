@@ -356,7 +356,7 @@ AC_Model_data_by_position %>%
             Rxn_diff = Rxn - filter(., Position == min(Position))$Rxn)) %>%
   ungroup %>%
   # filter()
-  ggplot(aes(x = Position, y = Rxn_norm,
+  ggplot(aes(x = Position, y = Rxn_diff,
              color = detail, linetype = Genotype,
              group = interaction(detail, Genotype))) +
   stat_summary(fun = function(x) mean(x, na.rm = TRUE),
