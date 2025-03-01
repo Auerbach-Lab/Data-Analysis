@@ -484,13 +484,10 @@ FSA::dunnTest(percent ~ interaction(Genotype, detail),
 AC_Model_data %>%
   filter(task == "Base case") %>%
   filter(Response == "Hit") %>%
-  mutate(detail = factor(detail, 
-                         levels = c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")),
-         Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
   reframe(percent = mean(percent, na.rm = TRUE),
           .by = c(rat_ID, rat_name, Genotype, Sex, 
                   task, detail, Response)) %>%
-  filter(detail %in% c("Round 2", "CNO 3mg/kg")) %>%
+  filter(detail %in% c("Baseline", "CNO 3mg/kg")) %>%
   mutate(level = factor(detail, labels = c(1, 2)) %>% as.numeric()) %>%
   select(level, percent) %>%
   # cramers_v()
