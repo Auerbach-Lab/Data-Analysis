@@ -143,7 +143,7 @@ Rxn_table %>%
        y = "Reaction time (ms, mean +/- SE)",
        color = "Genotype", linetype = "") +
   scale_color_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
-                                "TSC only" = "deepskyblue", "Fmr1 only" = "red")) +
+                                "TSC only" = "deepskyblue", "FXS only" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
   facet_wrap(~ Duration) +
   theme_classic() +
