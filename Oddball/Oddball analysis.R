@@ -259,6 +259,47 @@ Rxn_table = Daily_summary_from_trials_by_position %>%
 
 
 
+# Reaction for FXS baseline -----------------------------------------------
+FXS_core_baseline_data = 
+  Daily_summary_from_trials %>%
+  filter(str_detect(Genotype, pattern = "Fmr1")) %>%
+  filter(phase == "Tone-BBN") %>%
+  filter(Response == "Hit") %>%
+  filter(task == "Base case") %>%
+  # select only baselines
+  filter(str_detect(detail, pattern = "(4-6|Round [:digit:])"))
+
+FXS_core_baseline_data_trial_count = 
+  FXS_core_baseline_data %>%
+    # Get Averages for each rat
+  reframe(go_freq = unique(go),
+          go_count = n(),
+          .by = c(rat_ID, rat_name, Sex, Genotype, go)) %>%
+  reframe(min_count = min(go_count),
+          .by = c(rat_ID, rat_name, Sex, Genotype)) %>%
+  select(rat_ID, min_count)
+  
+ 
+FXS_baseline_hit_reaction =
+  FXS_core_baseline_data %>%
+    select(-task, -phase, -detail) %>%
+  # add trial count to select down to for each rat
+  left_join(FXS_core_baseline_data_trial_count,
+            by = join_by(rat_ID)) %>%
+  nest_by(date, rat_ID, rat_name, go, min_count) %>%
+  # get even amount of trials for each frequency
+  group_by(rat_ID, rat_name, go) %>% 
+  do(arrange(., desc(date)) %>%
+       # Select most recent days for each frequency and task
+       head(n = unique(.$min_count)) %>%
+       unnest(data)) %>%
+  ungroup %>%
+  # Get Averages for each rat
+  reframe(Rxn = mean(Rxn, na.rm = TRUE),
+          n = n(),
+          .by = c(rat_ID, rat_name, Sex, Genotype))
+
+
 # DREADD testing (PFC) ----------------------------------------------------------
 
 # Normality testing
