@@ -78,6 +78,13 @@ CNO_rats = core_data %>%
   # filter(rat_name %in% c("Green1", "Green2", "Green3", "Green4", "Lime5", "Purple5")) %>%
   .$rat_ID %>% unique()
 
+CNO_dates = core_data %>% 
+  filter(rat_ID %in% CNO_rats & detail == "CNO 3mg/kg") %>% 
+  group_by(rat_ID) %>% 
+  do(arrange(., date) %>% head(n = 1)) %>% 
+  rename(treatment_date = date) %>%
+  select(rat_ID, treatment_date)
+
 ## Multiple runs in a day; can be filtered out later ----
 multiple_runs_in_a_day = 
   reframe(core_data,
@@ -285,21 +292,32 @@ drug_piloting_Rxn_overall_model_postHoc$res %>%
 
 # AC inhibition -----------------------------------------------------------
 
+## TODO: filter to 5 before and after treatment
+# left_join(CNO_dates,
+#           by = join_by(rat_ID))
+#   filter(date < treatment_date)
+
 AC_Model_data = Daily_summary_from_trials %>% 
   filter(rat_ID %in% CNO_rats) %>%
   filter(detail %in% c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")) %>%
+  mutate(detail = str_replace(detail, pattern = "Round [:digit:]", replacement = "Baseline")) %>%
   nest_by(date, rat_ID, rat_name, go, task, detail) %>%
+
   arrange(rat_ID, go, date) %>%
   group_by(rat_ID, rat_name, go, detail) %>% 
   do(arrange(., desc(date)) %>% 
        # Select most recent days for each frequency and task
        head(n = 5) %>%
        unnest(data))  %>%
-  ungroup
+  ungroup %>%
+  mutate(detail = factor(detail, 
+                         levels = c("Baseline", "Between Treatment", "CNO 3mg/kg")),
+         Genotype = str_remove(Genotype, pattern = "Fmr1-LE_"))
 
 AC_Model_data_by_position = Daily_summary_from_trials_by_position %>% 
   filter(rat_ID %in% CNO_rats) %>%
   filter(detail %in% c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")) %>%
+  mutate(detail = str_replace(detail, pattern = "Round [:digit:]", replacement = "Baseline")) %>%
   nest_by(date, rat_ID, rat_name, go, task, detail) %>%
   arrange(rat_ID, go, date) %>%
   group_by(rat_ID, rat_name, go, detail) %>% 
@@ -310,11 +328,15 @@ AC_Model_data_by_position = Daily_summary_from_trials_by_position %>%
   ungroup %>%
   mutate(percent = trials/position_trials,
          .by = c(date, rat_ID, rat_name, Genotype, Sex, 
-                 task, detail, go, Position, Response))
+                 task, detail, go, Position, Response)) %>%
+  mutate(detail = factor(detail, 
+                         levels = c("Baseline", "Between Treatment", "CNO 3mg/kg")),
+         Genotype = str_remove(Genotype, pattern = "Fmr1-LE_"))
 
 AC_FA_data = FA_table %>% 
   filter(rat_ID %in% CNO_rats) %>%
   filter(detail %in% c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")) %>%
+  mutate(detail = str_replace(detail, pattern = "Round [:digit:]", replacement = "Baseline")) %>%
   nest_by(date, rat_ID, rat_name, go, task, detail) %>%
   arrange(rat_ID, go, date) %>%
   group_by(rat_ID, rat_name, go, detail) %>% 
@@ -322,7 +344,10 @@ AC_FA_data = FA_table %>%
        # Select most recent days for each frequency and task
        head(n = 5) %>%
        unnest(data))  %>%
-  ungroup
+  ungroup %>%
+  mutate(detail = factor(detail, 
+                         levels = c("Baseline", "Between Treatment", "CNO 3mg/kg")),
+         Genotype = str_remove(Genotype, pattern = "Fmr1-LE_"))
   
 
 # AC_Model_data_summary = 
