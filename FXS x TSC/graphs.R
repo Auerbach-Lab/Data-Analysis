@@ -73,7 +73,7 @@ Individual_Graphs =
 Individual_Graphs%>%
   # filter(rat_ID %in% Group1) %>%
   filter(name %in% c("Orange2", "Orange3", "Orange4", #Orange1, #(Group 1.1)
-                     "Orange5", #"Orange6", "Lime1", "Lime2" #still in training (Group 1.2)
+                     "Lime1", "Lime2", "Orange5", "Orange6",  #still in training (Group 1.2)
                      "Blue1", "Blue2", "Purple6", "Lime6")) %>% #(Group 1.3)
   .$single_rat_graph
 
