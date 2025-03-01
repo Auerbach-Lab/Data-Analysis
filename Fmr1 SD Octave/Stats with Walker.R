@@ -345,6 +345,11 @@ shapiro.test(TH_aov$residuals)$p.value
 
 summary(TH_aov)
 
+summary(lm(TH ~ genotype * current_freq,
+           data = walker_ABR_data %>%
+             summarise(TH = mean(current_inten, na.rm = TRUE),
+                       .by = c(rat_ID, genotype, current_freq))))
+
 
 # d' TH -------------------------------------------------------------------
 
