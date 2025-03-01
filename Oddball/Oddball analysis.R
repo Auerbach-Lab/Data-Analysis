@@ -302,7 +302,6 @@ AC_Model_data = Daily_summary_from_trials %>%
   filter(detail %in% c("Round 1", "Round 2", "Round 3", "Between Treatment", "CNO 3mg/kg")) %>%
   mutate(detail = str_replace(detail, pattern = "Round [:digit:]", replacement = "Baseline")) %>%
   nest_by(date, rat_ID, rat_name, go, task, detail) %>%
-
   arrange(rat_ID, go, date) %>%
   group_by(rat_ID, rat_name, go, detail) %>% 
   do(arrange(., desc(date)) %>% 
