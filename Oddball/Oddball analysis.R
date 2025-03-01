@@ -432,6 +432,11 @@ Parametric_Check(Hit_AC_aov)
 
 summary(Hit_AC_aov)
 
+broom::tidy(TukeyHSD(Hit_AC_aov)) %>% 
+  mutate(sig = gtools::stars.pval(adj.p.value)) %>%
+  filter(sig != " ") 
+
+
 #### Non-parametric ----
 # Kruskal Testing - Main effects only 
 lapply(c("Genotype", "detail" # Main effects
