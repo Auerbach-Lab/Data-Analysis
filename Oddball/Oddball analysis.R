@@ -479,6 +479,62 @@ FSA::dunnTest(percent ~ interaction(Genotype, detail),
   # filter(! Sig %in% c(" ", ".")) %>%
   select(-Comp1, -Comp2)
 
+### Miss ----
+Miss_AC_aov = 
+  aov(percent ~ detail * Genotype,
+      data = AC_Model_data %>%
+        filter(task == "Base case") %>%
+        reframe(percent = mean(percent, na.rm = TRUE),
+                .by = c(rat_ID, rat_name, Genotype, Sex, 
+                        task, detail, go, Response)) %>%
+        filter(Response == "Miss"))
+
+Parametric_Check(Miss_AC_aov)
+
+summary(Miss_AC_aov)
+
+#### Non-parametric ----
+# Kruskal Testing - Main effects only 
+lapply(c("Genotype", "detail" # Main effects
+), 
+function(x) kruskal.test(reformulate(x, "percent"),
+                         data = AC_Model_data %>%
+                           filter(task == "Base case") %>%
+                           reframe(percent = mean(percent, na.rm = TRUE),
+                                   .by = c(rat_ID, rat_name, Genotype, Sex, 
+                                           task, detail, go, Response)) %>%
+                           filter(Response == "Miss"))) %>% 
+  # Convert to table
+  do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "bonf"),
+         sig = gtools::stars.pval(adj.p.value)) %>%
+  select(method, parameter, statistic, data.name, p.value, adj.p.value, sig)
+
+#### Post-Hoc Dunn's Test ----
+FSA::dunnTest(percent ~ interaction(Genotype, detail),
+              data = AC_Model_data %>%
+                filter(task == "Base case") %>%
+                reframe(percent = mean(percent, na.rm = TRUE),
+                        .by = c(rat_ID, rat_name, Genotype, Sex, 
+                                task, detail, go, Response)) %>%
+                filter(Response == "Miss"),
+              method = "bonf") %>%
+  .$res %>%
+  as_tibble() %>%
+  select(-P.unadj) %>%
+  mutate(Sig = gtools::stars.pval(P.adj),
+         Comp1 = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+         Comp2 = str_split_fixed(.$Comparison, ' - ', 2)[,2],
+         geno1 = str_split_fixed(Comp1, '\\.', 2)[,1],
+         detail1 = str_split_fixed(Comp1, '\\.', 2)[,2],
+         geno2 = str_split_fixed(Comp2, '\\.', 2)[,1],
+         detail2 = str_split_fixed(Comp2, '\\.', 2)[,2]) %>%
+  # only compare within a sex (sib-sib direct comparison)
+  filter(geno1 == geno2) %>%
+  # filter(! Sig %in% c(" ", ".")) %>%
+  select(-Comp1, -Comp2)
+
 ## Power analysis ----
 ### hit ----
 AC_Model_data %>%
