@@ -125,6 +125,7 @@ TH_table %>%
 # Reaction time -----------------------------------------------------------
 
 Rxn_table %>%
+  filter(Intensity >= 20) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
   # filter(! str_detect(Intensity, pattern = "5$")) %>%
   ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(Duration),
