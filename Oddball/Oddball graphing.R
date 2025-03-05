@@ -129,9 +129,9 @@ FXS_baseline_hit_reaction %>%
   theme_light() +
   theme(legend.position = "none")
 
-Rxn_table %>%
-  filter(str_detect(Genotype, pattern = "Fmr1")) %>%
-  filter(task %in% c("Base case", "Rotating") & detail %in% c("4-6", "Round 1")) %>%
+## by position ----
+# you can do Rxn (absolute time, Rxn_diff (difference in s from position 4), or Rxn_norm (% difference from position 4))
+FXS_baseline_hit_reaction_by_position %>%
   mutate(group = case_when(rat_ID < 300 ~ "Group 1",
                            rat_ID >= 300 ~ "Group 2",
                            .default = "Unknown")) %>%

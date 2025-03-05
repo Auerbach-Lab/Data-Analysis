@@ -304,6 +304,95 @@ FXS_baseline_hit_reaction =
 ### Stats ----
 wilcox.test(Rxn ~ Genotype, data = FXS_baseline_hit_reaction)
 
+## By Position -----
+FXS_core_baseline_data_by_position = 
+  Daily_summary_from_trials_by_position %>%
+  filter(str_detect(Genotype, pattern = "Fmr1")) %>%
+  filter(phase == "Tone-BBN") %>%
+  filter(Response == "Hit") %>%
+  filter(task == "Base case") %>%
+  # select only baselines
+  filter(str_detect(detail, pattern = "(4-6|Round [:digit:])")) %>%
+  mutate(Genotype = str_remove(Genotype, pattern = "Fmr1-LE_"))
+
+
+FXS_baseline_hit_reaction_by_position =
+  FXS_core_baseline_data_by_position %>%
+  select(-task, -phase, -detail) %>%
+  # add trial count to select down to for each rat
+  left_join(FXS_core_baseline_data_trial_count,
+            by = join_by(rat_ID)) %>%
+  nest_by(date, rat_ID, rat_name, go, min_count, Position) %>%
+  # get even amount of trials for each frequency
+  group_by(rat_ID, rat_name, go, Position) %>% 
+  do(arrange(., desc(date)) %>%
+       # Select most recent days for each frequency and task
+       head(n = unique(.$min_count)) %>%
+       unnest(data)) %>%
+  ungroup %>%
+  group_by(date, rat_ID, rat_name) %>%
+  do(mutate(., Rxn_norm = Rxn/filter(., Position == min(Position))$Rxn,
+            Rxn_diff = Rxn - filter(., Position == min(Position))$Rxn)) %>%
+  ungroup %>%
+  # Get Averages for each rat
+  reframe(Rxn = mean(Rxn, na.rm = TRUE),
+          Rxn_diff = mean(Rxn_diff, na.rm = TRUE),
+          Rxn_norm = mean(Rxn_norm, na.rm = TRUE),
+          n = n(),
+          .by = c(rat_ID, rat_name, Sex, Genotype, Position))
+
+### Stats, absolute ----
+# no main effect so questionable to do this
+FXS_Rxn_by_position_aov = 
+  aov(Rxn ~ Position * Genotype,
+      data = FXS_baseline_hit_reaction_by_position)
+
+Parametric_Check(FXS_Rxn_by_position_aov)
+
+summary(FXS_Rxn_by_position_aov)
+
+#### Non-parametric ----
+# Kruskal Testing - Main effects only 
+lapply(c("Genotype", "Position" # Main effects
+), 
+function(x) kruskal.test(reformulate(x, "Rxn_diff"),
+                         data = FXS_baseline_hit_reaction_by_position)) %>% 
+  # Convert to table
+  do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "bonf"),
+         sig = gtools::stars.pval(adj.p.value)) %>%
+  select(method, parameter, statistic, data.name, p.value, adj.p.value, sig)
+
+#### Post-Hoc Dunn's Test ----
+# FSA::dunnTest(Rxn_norm ~ interaction(Genotype, Position),
+#               data = FXS_baseline_hit_reaction_by_position,
+#               method = "bonf") %>%
+#   .$res %>%
+#   as_tibble() %>%
+#   select(-P.unadj) %>%
+#   mutate(Sig = gtools::stars.pval(P.adj),
+#          Comp1 = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+#          Comp2 = str_split_fixed(.$Comparison, ' - ', 2)[,2],
+#          geno1 = str_split_fixed(Comp1, '\\.', 2)[,1],
+#          position1 = str_split_fixed(Comp1, '\\.', 2)[,2],
+#          geno2 = str_split_fixed(Comp2, '\\.', 2)[,1],
+#          position2 = str_split_fixed(Comp2, '\\.', 2)[,2]) %>%
+#   # only compare within a sex (sib-sib direct comparison)
+#   filter(geno1 != geno2) %>%
+#   filter(position1 == position2) %>%
+#   # filter(! Sig %in% c(" ")) %>%
+#   select(-Comp1, -Comp2)
+
+FXS_baseline_hit_reaction_by_position %>%
+  filter(Position %in% c(5, 6)) %>%
+  group_by(Position) %>%
+  do(wilcox.test(Rxn_diff ~ Genotype, data = .) %>% 
+       broom::tidy(.)) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "bonf", n = 2),
+         sig = gtools::stars.pval(adj.p.value))
+
 # DREADD testing (PFC) ----------------------------------------------------------
 
 # Normality testing
