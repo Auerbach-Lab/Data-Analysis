@@ -89,7 +89,7 @@ TH_table %>%
   stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
                position = position_dodge(1), vjust = 2, size = 3) +
   scale_fill_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
-                               "TSC only" = "deepskyblue", "Fmr1 only" = "red")) +
+                               "TSC only" = "deepskyblue", "FXS only" = "red")) +
   labs(x = "",
        y = "Threshold (dB, mean +/- SE)",
        fill = "Genotype") +
@@ -110,7 +110,7 @@ TH_table %>%
   stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
                position = position_dodge(1), vjust = 2, size = 3) +
   scale_fill_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
-                                "TSC only" = "deepskyblue", "Fmr1 only" = "red")) +
+                                "TSC only" = "deepskyblue", "FXS only" = "red")) +
   labs(x = "",
        y = "Threshold (dB, mean +/- SE)",
        fill = "Genotype") +
@@ -180,4 +180,3 @@ Rxn_table %>%
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   ) 
-
