@@ -111,7 +111,6 @@ individual_graphs = Rxn %>%
 
 individual_graphs$plot
 
-# Rxn for Base case by genotype -------------------------------------------
 # FXS Rxn for Base case by genotype -------------------------------------------
 FXS_baseline_hit_reaction %>%
   mutate(group = case_when(rat_ID < 300 ~ "Group 1",
@@ -244,7 +243,7 @@ AC_Model_data %>%
   filter(task == "Base case") %>%
   reframe(percent = mean(percent, na.rm = TRUE),
          .by = c(rat_ID, rat_name, Genotype, Sex, 
-                 task, detail, go, Response)) %>%
+                 task, detail, Response)) %>%
   ggplot(aes(x = Genotype, y = percent * 100,
              fill = detail,
              group = interaction(detail, Genotype))) +
@@ -261,7 +260,7 @@ AC_Model_data_by_position %>%
   filter(task == "Base case" & Response == "Hit") %>%
   reframe(percent = mean(percent, na.rm = TRUE),
           .by = c(rat_ID, rat_name, Genotype, Sex, 
-                  task, detail, go, Position)) %>%
+                  task, detail, Position)) %>%
   # filter()
   ggplot(aes(x = Position, y = percent,
              color = detail, linetype = Genotype,
@@ -286,7 +285,7 @@ AC_Model_data_by_position %>%
   filter(task == "Base case" & Response == "FA") %>%
   reframe(percent = mean(percent, na.rm = TRUE),
           .by = c(rat_ID, rat_name, Genotype, Sex, 
-                  task, detail, go, Position)) %>%
+                  task, detail, Position)) %>%
   # filter()
   ggplot(aes(x = Position, y = percent * 100,
              color = detail, linetype = Genotype,
@@ -310,7 +309,7 @@ AC_Model_data_by_position %>%
   filter(task == "Base case" & Response == "Miss") %>%
   reframe(percent = mean(percent, na.rm = TRUE),
           .by = c(rat_ID, rat_name, Genotype, Sex, 
-                  task, detail, go, Position)) %>%
+                  task, detail, Position)) %>%
   # filter()
   ggplot(aes(x = Position, y = percent * 100,
              color = detail, linetype = Genotype,
@@ -335,7 +334,7 @@ AC_Model_data %>%
   filter(Response != "Miss") %>%
   reframe(reaction = mean(Rxn, na.rm = TRUE),
           .by = c(rat_ID, rat_name, Genotype, Sex, 
-                  task, detail, go, Response)) %>%
+                  task, detail, Response)) %>%
   ggplot(aes(x = Genotype, y = reaction,
              fill = detail,
              group = interaction(detail, Genotype))) +
