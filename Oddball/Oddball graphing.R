@@ -340,7 +340,7 @@ AC_Model_data %>%
              group = interaction(detail, Genotype))) +
   geom_boxplot() +
   labs(x = "Genotype",
-       y = "Percent",
+       y = "Reaction time (ms)",
        fill = "Treatment", color = "Genotype",
        shape = "Genotype", linetype = "Treatment") +
   facet_wrap(~ Response, ncol = 1, scales = "free_y") +
@@ -367,7 +367,7 @@ AC_Model_data_by_position %>%
   stat_summary(geom = "line", fun = mean, linewidth = 2) +
   stat_summary(aes(shape = Genotype), geom = "point", fun = mean, size = 3, stroke = 3) +
   labs(x = "Genotype",
-       y = "Reaction time (normalaized to position 4)",
+       y = "Reaction time (normalaized to position 4, ms)",
        fill = "Treatment", color = "Treatment",
        shape = "Genotype", linetype = "Genotype") +
   scale_x_continuous(breaks = seq(1, 8, by = 1)) +
