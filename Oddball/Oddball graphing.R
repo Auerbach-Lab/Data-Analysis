@@ -415,3 +415,8 @@ AC_FA_data %>%
        color = "Genotype") +
   facet_wrap(~ detail) +
   theme_light()
+
+ggsave(filename = "ACX_CNO_FA_density.svg",
+       path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Walker/",
+       plot = last_plot(),
+       width = 7.1, height = 5.75, units = "in", dpi = 300)  
