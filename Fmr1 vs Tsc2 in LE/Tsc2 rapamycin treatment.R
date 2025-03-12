@@ -226,7 +226,7 @@ function(x) kruskal.test(reformulate(x, "Rxn"),
   select(method, parameter, statistic, data.name, p.value, adj.p.value, sig)
 
 
-### Graph -----
+### Graph (Rapa) -----
 Rapa_rxn_data_limited %>%
   filter(rat_name != "Lime3") %>%
   filter(detail %in% c("Rapamycin", "Baseline")) %>%
@@ -341,6 +341,7 @@ Rapa_rxn_data_limited %>%
                geom = "point", position = position_dodge(0.5)) +
   stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                geom = "line", position = position_dodge(0.5)) +
+  geom_hline(aes(yintercept = 0)) + 
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
        color = "Genotype", linetype = "Treatment") +
@@ -374,6 +375,7 @@ Rapa_rxn_data_limited %>%
   filter(detail == "Recovery") %>%
   ggplot(aes(x = `Inten (dB)`, y = Rxn_diff, linetype = as.factor(detail),
              color = genotype, group = interaction(detail, genotype))) +
+  geom_hline(aes(yintercept = 0)) + 
   stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
                fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
@@ -386,6 +388,49 @@ Rapa_rxn_data_limited %>%
        y = "Reaction time (ms, mean +/- SE)",
        color = "Genotype", linetype = "Treatment") +
   scale_linetype_manual(values = c("Rapamycin" = "longdash", "Recovery" = "dotdash")) +
+  scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(~ sex) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255)),
+    legend.position = c(.9,.85)
+  )
+
+
+### Graph - Permanent Change -----
+Rapa_rxn_data_limited %>%
+  filter(! rat_name %in% c("Lime3")) %>%
+  filter(`Inten (dB)` > 15) %>%
+  filter(detail %in% c("Baseline", "Permanent")) %>%
+  group_by(rat_ID, rat_name, sex, genotype, line, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`) %>%
+  do(
+    mutate(., Rxn_length = length(Rxn),
+           Baseline = ifelse(length(Rxn) == 2, 
+                             filter(., detail == "Baseline")$Rxn, NA_integer_)) %>% #print %>%
+      mutate(Rxn_diff = ifelse(Rxn != Baseline,
+                               (Rxn - Baseline),
+                               NA_integer_)) #%>% print
+  ) %>%
+  ungroup %>%
+  # filter(! is.na(Rxn_diff)) %>%
+  filter(detail == "Permanent") %>%
+  ggplot(aes(x = `Inten (dB)`, y = Rxn_diff, linetype = as.factor(detail),
+             color = genotype, group = interaction(detail, genotype))) +
+  geom_hline(aes(yintercept = 0)) + 
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1, position = position_dodge(0.5)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(0.5)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "line", position = position_dodge(0.5)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "Treatment") +
+  scale_linetype_manual(values = c("Rapamycin" = "longdash", "Permanent" = "twodash")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
   facet_wrap(~ sex) +
