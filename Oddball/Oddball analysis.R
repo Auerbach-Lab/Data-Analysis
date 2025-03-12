@@ -572,7 +572,7 @@ broom::tidy(TukeyHSD(Hit_AC_aov)) %>%
   filter(sig != " ") 
 
 
-# #### Non-parametric ----
+#### Non-parametric ----
 # # Kruskal Testing - Main effects only 
 # lapply(c("Genotype", "detail" # Main effects
 # ), 
@@ -589,8 +589,8 @@ broom::tidy(TukeyHSD(Hit_AC_aov)) %>%
 #   mutate(adj.p.value = p.adjust(p.value, "bonf"),
 #          sig = gtools::stars.pval(adj.p.value)) %>%
 #   select(method, parameter, statistic, data.name, p.value, adj.p.value, sig)
-# 
-# #### Post-Hoc Dunn's Test ----
+
+#### Post-Hoc Dunn's Test ----
 # FSA::dunnTest(percent ~ interaction(Genotype, detail),
 #               data = AC_Model_data %>%
 #                 filter(task == "Base case") %>%
