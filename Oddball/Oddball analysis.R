@@ -489,6 +489,27 @@ AC_Model_data %>%
           .by = c(rat_ID, rat_name, Genotype, Sex, task, detail, go)) %>%
   arrange(rat_ID, detail, go)
 
+## Trial count ----
+trails_AC_aov = 
+  aov(trials ~ detail * Genotype,
+      data = AC_Model_data %>%
+        filter(task == "Base case") %>%
+        mutate(detail = factor(detail, 
+                               levels = c("Baseline", "Between Treatment", "CNO 3mg/kg")),
+               Genotype = str_remove(Genotype, pattern = "Fmr1-LE_")) %>%
+        filter(Response == "Hit") %>%
+        reframe(trials = mean(total_trials, na.rm = TRUE),
+                .by = c(rat_ID, rat_name, Genotype, Sex, 
+                        task, detail, Response)))
+
+Parametric_Check(trails_AC_aov)
+
+summary(trails_AC_aov)
+
+broom::tidy(TukeyHSD(trails_AC_aov)) %>% 
+  mutate(sig = gtools::stars.pval(adj.p.value)) %>% View
+  filter(sig != " ") 
+
 ## Hit/Miss/FA overall ----
 ### FA ----
 FA_AC_aov = 

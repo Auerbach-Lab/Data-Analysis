@@ -238,6 +238,23 @@ Probe_table %>%
 
 # AC inhibition -----------------------------------------------------------
 
+## Trial Count ----
+AC_Model_data %>%
+  filter(task == "Base case") %>%
+  filter(Response == "Hit") %>%
+  reframe(trials = mean(total_trials, na.rm = TRUE),
+          .by = c(rat_ID, rat_name, Genotype, Sex, 
+                  task, detail, Response)) %>%
+  ggplot(aes(x = Genotype, y = trials,
+             fill = detail,
+             group = interaction(detail, Genotype))) +
+  geom_boxplot() +
+  labs(x = "Genotype",
+       y = "Average trials per day",
+       fill = "Treatment", color = "Genotype",
+       shape = "Genotype", linetype = "Treatment") +
+  theme_light()
+
 ## Hit/Miss/FA overall ----
 AC_Model_data %>%
   filter(task == "Base case") %>%
