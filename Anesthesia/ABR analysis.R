@@ -45,4 +45,24 @@ broom::tidy(TukeyHSD(aov, which = "Drug_Assigned")) %>%
   mutate(sig = gtools::stars.pval(adj.p.value)) %>%
     filter(sig != " ")
   
+## 70+dB -----
+  # highest threshold is 70dB under Isoflurane
+  
+aov_limited = aov(RMS_diff ~ Intensity * Drug_Assigned, data = data %>% filter(Intensity >= 70))
+
+summary(aov_limited)
+
+broom::tidy(TukeyHSD(aov_limited, which = "Drug_Assigned")) %>% 
+  mutate(sig = gtools::stars.pval(adj.p.value)) %>%
+  filter(sig != " ")
+
+# post_hoc = 
+data %>%
+  group_by(Intensity) %>%
+  do(
+    TukeyHSD(aov(RMS_diff ~ Drug_Assigned, data = .)) %>% tidy
+  ) %>%
+  mutate(sig = gtools::stars.pval(adj.p.value)) %>%
+  filter(sig != " ")
+
   
