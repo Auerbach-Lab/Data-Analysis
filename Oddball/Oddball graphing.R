@@ -437,3 +437,24 @@ ggsave(filename = "ACX_CNO_FA_density.svg",
        path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Walker/",
        plot = last_plot(),
        width = 7.1, height = 5.75, units = "in", dpi = 300)  
+
+
+# Reaction time histogram -------------------------------------------------
+
+## FA density reaction times ----
+Trials_table %>%
+  as_tibble() %>%
+  # Omit Training & Reset days
+  dplyr::filter(! task %in% c("Training", "Reset")) %>%
+  filter(Response == "Hit") %>%
+  ggplot(aes(x = `Reaction_(s)`, color = Genotype)) +
+  geom_vline(xintercept = c(0.05, 0.75), color = "grey50") + # tone ends
+  geom_histogram(binwidth = 0.05) +
+  # geom_beeswarm(cex = 2, method = "compactswarm") +
+  # geom_density(bw = 0.05, linewidth = 1) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  labs(x = "Reaction time (s)",
+       y = "Density",
+       color = "Genotype") +
+  facet_wrap(~ Genotype) +
+  theme_light()
