@@ -305,6 +305,42 @@ discrimination_FA_table =
   summarise(FA_percent_detailed = mean(FA_percent_detailed, na.rm = TRUE),
             .groups = "drop")
 
+## FA by Freq stats----
+
+FA_freq_data = 
+  Discrimination_data %>%
+  filter(detail == "Normal") %>%
+  # filter(Type == "Broad") %>%
+  group_by(rat_ID, rat_name, Genotype, Go_freq, NoGo_freq, detail, octave_steps, Type) %>%
+  summarise(FA_percent_detailed = mean(FA_percent_detailed, na.rm = TRUE),
+            .groups = "drop") %>%
+  mutate(Go_freq = as.factor(Go_freq))
+
+FA_freq_aov = aov(FA_percent_detailed ~ Go_freq * Genotype,
+                       data = FA_freq_data)
+
+shapiro.test(FA_freq_aov$residuals)
+
+summary(FA_freq_aov)
+
+kruskal.test(FA_percent_detailed ~ Go_freq,
+             data = FA_freq_data)
+
+# Kruskal Testing - Main effects only 
+lapply(c("Genotype", "Go_freq", # Main effects
+         "interaction(Genotype, Go_freq)"
+), 
+function(x) kruskal.test(reformulate(x, "FA_percent_detailed"),
+                         data = FA_freq_data)) %>% 
+  # Convert to table
+  do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "bonf"),
+         sig = gtools::stars.pval(adj.p.value)) %>%
+  select(method, parameter, statistic, data.name, adj.p.value, sig)
+
+
+
 ## Graph of FA -----
 FA_plot =
 ggplot(data = discrimination_FA_table, 
@@ -497,9 +533,37 @@ Reaction_data %>%
   scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
   scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
   labs(x = "",
-       y = "Threshold (octave step)",
+       y = "Reaction time (ms)",
        fill = "Genotype") +
   facet_wrap(~ Genotype) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+## Rxn by freq graph ----
+Discrimination_data %>%
+  filter(detail == "Normal") %>%
+  filter(Type == "Broad") %>%
+  mutate(Go_freq = as.factor(Go_freq),
+         NoGo_freq = as.factor(NoGo_freq)) %>%
+  # remove any duplicates caused by unnesting
+  select(rat_ID, reaction, Type, detail, Genotype, Go_freq, UUID) %>% unique %>%
+  reframe(reaction = mean(reaction, na.rm = TRUE),
+          .by = c(rat_ID, detail, Genotype, Type, Go_freq)) %>%
+  filter(Type != "Error") %>%
+  ggplot(aes(x = Genotype, y = reaction, fill = Genotype, group = interaction(Genotype))) +
+  geom_boxplot() +
+  geom_point(show.legend = FALSE) +
+  stat_summary(fun.data = n_fun, geom = "text", aes(color = Genotype),
+               show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 3) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  labs(x = "",
+       y = "Reaction time (ms)",
+       fill = "Genotype") +
+  facet_wrap(~ Go_freq) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
