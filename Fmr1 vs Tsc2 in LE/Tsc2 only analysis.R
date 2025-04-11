@@ -50,12 +50,13 @@ Tsc2.TH.aov.data = TH_table %>%
   filter(line == "Tsc2-LE") %>%
   {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
   filter(Frequency == 0) %>%
-  filter(detail %in% c("Alone", "Recheck")) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
   mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                            rat_ID < 300 ~ "Group 1",
-                           rat_ID >= 300 ~ "Group 2",
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
                            .default = "Unknown")) %>%
-  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3")) %>%
   filter(Duration %in% c(300, 50)) %>% # Recheck was only on 50 & 300
   mutate(genotype = as.factor(genotype),
          Duration = as.factor(Duration),
@@ -93,15 +94,17 @@ Tsc2_TH_averages =
   filter(line == "Tsc2-LE") %>%
   {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
   filter(Frequency == 0) %>%
-  filter(detail %in% c("Alone", "Recheck")) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
   mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                            rat_ID < 300 ~ "Group 1",
-                           rat_ID >= 300 ~ "Group 2",
-                           .default = "Unknown")) 
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
+                           .default = "Unknown"))
+
 
 # View
 Tsc2_TH_averages %>%
-  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+    filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3")) %>%
   filter(Duration %in% c(300, 50)) %>%
   group_by(genotype, Frequency, group, Duration) %>%
   summarise(TH = mean(TH, na.rm = TRUE), .groups = "drop") %>%
@@ -120,10 +123,11 @@ Tsc2_TH_gaph =
   filter(line == "Tsc2-LE") %>%
   {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
   filter(Frequency == 0) %>%
-  filter(detail %in% c("Alone", "Recheck")) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
   mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                            rat_ID < 300 ~ "Group 1",
-                           rat_ID >= 300 ~ "Group 2",
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
                            .default = "Unknown")) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% 
            factor(levels = c("BBN", "4", "8", "16", "32"))) %>%
@@ -133,7 +137,8 @@ Tsc2_TH_gaph =
     # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
     stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
                  position = position_dodge(1), vjust = 2, size = 3) +
-    scale_color_manual(values = c("Group 1" = "darkblue", "Group 2" = "goldenrod", "Group 2 Recheck" = "green")) +
+    scale_color_manual(values = c("Group 1" = "darkblue", "Group 2" = "goldenrod", 
+                                  "Group 2 Recheck" = "green", "Group 3" = "red")) +
     scale_fill_manual(values = c("WT" = "grey40", "Het" = "deepskyblue", "KO" = "lightcoral")) +
     labs(x = "",
          y = "Threshold (dB, mean +/- SE)",
@@ -152,10 +157,11 @@ TH_table %>%
   filter(line == "Tsc2-LE") %>%
   {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
   filter(Frequency == 0) %>%
-  filter(detail %in% c("Alone", "Recheck")) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
   mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                            rat_ID < 300 ~ "Group 1",
-                           rat_ID >= 300 ~ "Group 2",
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
                            .default = "Unknown")) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% 
            factor(levels = c("BBN", "4", "8", "16", "32"))) %>%
@@ -165,7 +171,8 @@ TH_table %>%
   # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
   stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
                position = position_dodge(1), vjust = 2, size = 3) +
-  scale_color_manual(values = c("Group 1" = "darkblue", "Group 2" = "goldenrod", "Group 2 Recheck" = "green")) +
+  scale_color_manual(values = c("Group 1" = "darkblue", "Group 2" = "goldenrod", 
+                                "Group 2 Recheck" = "green", "Group 3" = "red")) +
   scale_fill_manual(values = c("WT" = "grey40", "Het" = "deepskyblue", "KO" = "lightcoral")) +
   labs(x = "",
        y = "Threshold (dB, mean +/- SE)",
@@ -193,7 +200,8 @@ TH_table %>%
            factor(levels = c("BBN", "4", "8", "16", "32"))) %>%
   ggplot(aes(x = genotype, y = TH, fill = genotype, group = genotype)) +
   geom_boxplot(position = position_dodge(1), linewidth = 1, width = 0.8) +
-  scale_color_manual(values = c("Group 1" = "darkblue", "Group 2" = "goldenrod", "Group 2 Recheck" = "green")) +
+  scale_color_manual(values = c("Group 1" = "darkblue", "Group 2" = "goldenrod", 
+                                "Group 2 Recheck" = "green", "Group 3" = "red")) +
   scale_fill_manual(values = c("WT" = "grey40", "Het" = "deepskyblue", "KO" = "lightcoral")) +
   labs(x = "",
        y = "Threshold (dB, mean +/- SE)",
@@ -218,12 +226,13 @@ Tsc2_TH_overview_gaph =
   filter(line == "Tsc2-LE") %>%
   {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
   filter(Frequency == 0) %>%
-  filter(detail %in% c("Alone", "Recheck")) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
   mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                            rat_ID < 300 ~ "Group 1",
-                           rat_ID >= 300 ~ "Group 2",
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
                            .default = "Unknown")) %>%
-  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3")) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% 
            factor(levels = c("BBN", "4", "8", "16", "32"))) %>%
   ggplot(aes(x = genotype, y = TH, fill = genotype, group = interaction(genotype))) +
@@ -254,13 +263,14 @@ TH_table %>%
   filter(line == "Tsc2-LE") %>%
   filter(Frequency == 0) %>%
   filter(! detail %in% c("Mixed", "Rotating")) %>%
-  filter(Duration %in% c(300)) %>%
-  mutate(group = case_when(detail == "Recheck" ~ "Group 2",
+  filter(Duration %in% c(50)) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
+  mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                            rat_ID < 300 ~ "Group 1",
-                           rat_ID >= 300 ~ "Group 2 bad original",
-                           .default = "Unknown"),
-         Duration = factor(Duration, levels = c(50, 100, 300), ordered = TRUE)) %>%
-  filter(group %in% c("Group 1", "Group 2")) %>%
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
+                           .default = "Unknown")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3")) %>%
   ggplot(aes(x = genotype, y = TH, fill = genotype)) +
   geom_boxplot(linewidth = 1, width = 0.8) +
   # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
@@ -291,12 +301,13 @@ TH_table %>%
 Tsc2_Rxn = Rxn_table %>%
   filter(line == "Tsc2-LE") %>%
   {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
-  filter(detail %in% c("Alone", "Recheck")) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
   mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                            rat_ID < 300 ~ "Group 1",
-                           rat_ID >= 300 ~ "Group 2",
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
                            .default = "Unknown")) %>%
-  filter(group %in% c("Group 1", "Group 2 Recheck"))
+  filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3"))
 
 Tsc2_Rxn$Gaus = LambertW::Gaussianize(Tsc2_Rxn$Rxn)[, 1]
 
@@ -459,10 +470,11 @@ Tsc_single_frequency_rxn_graph =
   Rxn_table %>%
     filter(line == "Tsc2-LE") %>%
     {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
-    filter(detail %in% c("Alone", "Recheck")) %>%
+    filter(detail %in% c("Alone", "Recheck", "None")) %>%
     mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                              rat_ID < 300 ~ "Group 1",
-                             rat_ID >= 300 ~ "Group 2",
+                             rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                             rat_ID >= 328 ~ "Group 3",
                              .default = "Unknown")) %>%
     filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
     filter(Duration %in% c(300, 50)) %>%
@@ -496,7 +508,9 @@ Tsc_single_frequency_rxn_graph =
          y = "Reaction time (ms, mean +/- SE)",
          color = "Genotype", linetype = "",
          caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats")) +
-    scale_linetype_manual(values = c("Group 1" = "solid", "Group 2 Recheck" = "longdash")) +
+    scale_linetype_manual(values = c("Group 1" = "solid", 
+                                     "Group 2 Recheck" = "longdash",
+                                     "Group 3" = "dotted")) +
     scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
     scale_x_continuous(breaks = seq(0, 90, by = 10)) +
     facet_wrap(~ Duration) +
@@ -534,12 +548,13 @@ TH_annotation =
 Rxn_table %>%
   filter(line == "Tsc2-LE") %>%
   {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
-  filter(detail %in% c("Alone", "Recheck")) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
   mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                            rat_ID < 300 ~ "Group 1",
-                           rat_ID >= 300 ~ "Group 2",
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
                            .default = "Unknown")) %>%
-  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3")) %>%
   filter(sex == "Male") %>%
   filter(Frequency != 0) %>%
   filter(Intensity <= 90 & Intensity >= 10) %>%
@@ -578,6 +593,50 @@ ggsave(filename = "Tsc2_Rxn_tones_MALES.svg",
 
 
 ## Sex differences graph ---------------------------------------------------
+
+### New ----
+Rxn_table %>%
+  filter(line == "Tsc2-LE") %>%
+  {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
+  mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                           rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
+                           .default = "Unknown")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3")) %>%
+  filter(Duration %in% c(300, 50)) %>%
+  filter(Frequency == 0) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
+  filter(! str_detect(Intensity, pattern = "5$")) %>%
+  filter(Intensity < 90 & Intensity > 10) %>%
+  filter(Frequency == "BBN") %>%
+  ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(sex),
+             color = genotype, group = interaction(sex, genotype))) +
+  ## Lines for each group
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1.5, position = position_dodge(1)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(1), size = 3) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "line", position = position_dodge(1)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "",
+       caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats")) +
+  scale_linetype_manual(values = c("Male" = "solid", "Female" = "longdash")) +
+  scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(~ Duration) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
+
+#### Old ----
 
 Tsc_sex_differences_rxn_graph =   
   Rxn_table %>%
@@ -638,12 +697,13 @@ print(Tsc_sex_differences_rxn_graph)
 Rxn_table %>%
   filter(line == "Tsc2-LE") %>%
   {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
-  filter(detail %in% c("Alone", "Recheck")) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
   mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                            rat_ID < 300 ~ "Group 1",
-                           rat_ID >= 300 ~ "Group 2",
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
                            .default = "Unknown")) %>%
-  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3")) %>%
   filter(Duration %in% c(300, 50)) %>%
   filter(sex == "Female") %>%
   filter(Frequency == 0) %>%
@@ -685,12 +745,13 @@ Rxn_table %>%
 Rxn_table %>%
   filter(line == "Tsc2-LE") %>%
   {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
-  filter(detail %in% c("Alone", "Recheck")) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
   mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                            rat_ID < 300 ~ "Group 1",
-                           rat_ID >= 300 ~ "Group 2",
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
                            .default = "Unknown")) %>%
-  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3")) %>%
   filter(Duration %in% c(300, 50)) %>%
   filter(sex == "Male") %>%
   filter(Frequency == 0) %>%
@@ -776,12 +837,13 @@ dprime_table_Tsc2 = core_data %>%
   # Omit days with > 45% FA, i.e. guessing
   filter(FA_percent < FA_cutoff) %>%
   filter(line == "Tsc2-LE") %>%
-  filter(detail %in% c("Alone", "Recheck")) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
   mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                            rat_ID < 300 ~ "Group 1",
-                           rat_ID >= 300 ~ "Group 2",
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
                            .default = "Unknown")) %>%
-  filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3")) %>%
   # Get dprimes
   unnest(dprime) %>%
   summarise(dprime = mean(dprime, na.rm = TRUE), 
