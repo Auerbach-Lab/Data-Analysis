@@ -474,6 +474,19 @@ ggsave(filename = "Fmr1 SD d' for tone discrimination.svg",
 
 # Reaction time -----------------------------------------------------------
 
+## Averages ----
+Reaction_data %>%
+  filter(detail == "Normal") %>%
+  reframe(reaction = mean(reaction, na.rm = TRUE),
+          .by = c(rat_ID, detail, Genotype)) %>%
+  reframe(n = n(),
+          reaction_avg = mean(reaction, na.rm = TRUE),
+          SD = sd(reaction, na.rm = TRUE),
+          SE = FSA::se(reaction, na.rm = TRUE),
+          .by = c(Genotype))
+  
+
+
 ## Holding Performance ----
 dataset %>% 
   filter(task == "Holding") %>%
@@ -525,6 +538,32 @@ summary(Rxn.aov)
 ## Rxn Graph ----
 Reaction_data %>%
   filter(detail == "Normal") %>%
+  reframe(reaction = mean(reaction, na.rm = TRUE),
+          .by = c(rat_ID, detail, Genotype)) %>%
+  ggplot(aes(x = Genotype, y = reaction, fill = Genotype, group = Genotype)) +
+  geom_boxplot() +
+  geom_point(show.legend = FALSE) +
+  stat_summary(fun.data = n_fun, geom = "text", aes(color = Genotype),
+               show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 3) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  labs(x = "",
+       y = "Reaction time (ms)",
+       fill = "Genotype") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+ggsave(filename = "Fmr1 SD Rxn for tone discrimination.svg",
+       path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Progress Report Figs",
+       plot = last_plot(),
+       width = 10, height = 8, units = "in", dpi = 150)
+
+## Rxn Graph by file type ----
+Reaction_data %>%
+  filter(detail == "Normal") %>%
   ggplot(aes(x = Type, y = reaction, fill = Genotype, group = Type)) +
   geom_boxplot() +
   geom_point(show.legend = FALSE) +
@@ -569,6 +608,41 @@ Discrimination_data %>%
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
+
+## Holding Rxn ----
+dataset %>% 
+  filter(task == "Holding") %>%
+  filter(detail == "Normal") %>%
+  # Select 1st 5 days on holding
+  group_by(rat_ID, rat_name, task, detail) %>%
+  do(arrange(., desc(date)) %>%
+       # Select most recent days for each frequency and task
+       tail(n = 5))  %>%
+  ungroup %>%
+  mutate(reaction = map_dbl(reaction, pluck, "Rxn")*1000) %>%
+  reframe(reaction = mean(reaction, na.rm = TRUE),
+          n = n(),
+          .by = c(rat_ID, rat_name, detail, Genotype)) %>%
+  ggplot(aes(x = Genotype, y = reaction, fill = Genotype, group = Genotype)) +
+  geom_boxplot() +
+  geom_point(show.legend = FALSE) +
+  stat_summary(fun.data = n_fun, geom = "text", aes(color = Genotype),
+               show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 3) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  labs(x = "",
+       y = "Reaction time (ms)",
+       fill = "Genotype") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+ggsave(filename = "Fmr1 SD Rxn for holding 5 days before reversal.svg",
+       path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Progress Report Figs",
+       plot = last_plot(),
+       width = 10, height = 8, units = "in", dpi = 150)
 
 # Training stuff ----------------------------------------------------------
 
