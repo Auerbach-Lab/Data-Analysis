@@ -476,7 +476,7 @@ Tsc_single_frequency_rxn_graph =
                              rat_ID >= 300 & rat_ID < 328~ "Group 2",
                              rat_ID >= 328 ~ "Group 3",
                              .default = "Unknown")) %>%
-    filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+    filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3")) %>%
     filter(Duration %in% c(300, 50)) %>%
     filter(Frequency == 0) %>%
     mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
