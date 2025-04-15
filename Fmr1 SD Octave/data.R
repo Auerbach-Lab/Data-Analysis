@@ -216,6 +216,11 @@ ggplot(aes(x = Genotype, y = value, fill = Genotype, group = Genotype)) +
 
 print(stats_plot)
 
+ggsave(filename = "Fmr1 SD Rxn for tone discrimination.svg",
+       path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Progress Report Figs",
+       plot = last_plot(),
+       width = 10, height = 8, units = "in", dpi = 150)
+
 # Threshold ---------------------------------------------------------------
 # relative to octave steps
 cat("calulating thresholds...\n")
