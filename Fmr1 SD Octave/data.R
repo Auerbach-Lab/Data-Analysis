@@ -435,6 +435,131 @@ dataset %>%
             .by = c(rat_ID, rat_name, Genotype))
 
 
+# over time ------------------------------------------------------------
+discrimination_run_count =
+  Discrimination_data %>%
+  filter(detail == "Normal") %>%
+  filter(Type == "Broad") %>%
+  select(date, rat_name, rat_ID, file_name) %>%
+  unique %>%
+  group_by(rat_ID) %>%
+  do(
+    arrange(., date) %>%
+      rowid_to_column()
+  ) %>%
+  rename(Measure = rowid)
+  
+## FA ----
+Discrimination_data %>%
+  filter(detail == "Normal") %>%
+  filter(Type == "Broad") %>%
+  left_join(discrimination_run_count,
+            by = join_by(date, rat_name, rat_ID, file_name)) %>%
+  summarise(FA_percent_detailed = mean(FA_percent_detailed, na.rm = TRUE),
+            .by = c(Measure, rat_ID, Genotype, Go_freq, NoGo_freq, detail, octave_steps, Type)) %>%
+  mutate(Go_freq = as.factor(Go_freq)) %>%
+  filter(Measure < 5) %>%
+  mutate(Measure = as.factor(Measure)) %>%
+ggplot(aes(x = octave_steps, y = FA_percent_detailed * 100,
+           color = Genotype, shape = Measure, linetype = Measure, group = interaction(Genotype, Measure))) +
+  geom_hline(yintercept = 50, color = "forestgreen") +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - FSA::se(x, na.rm = TRUE),
+               fun.max = function(x) mean(x, na.rm = TRUE) + FSA::se(x, na.rm = TRUE),
+               geom = "errorbar", width = 0, position = position_dodge(0.1)) +
+  # mean for genotypes across all frequencies
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "line", linewidth = 1.5, position = position_dodge(.1)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(.1), stroke = 2) +
+  # stat_summary(fun.data = n_fun, geom = "text", aes(color = Genotype, size = Measure),
+  #              show.legend = TRUE, position = position_dodge(1), vjust = 0.5) +
+  scale_x_continuous(breaks = c(1, seq(0, 12, by = 2))) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  facet_wrap(~ Genotype) +
+  labs(x = "Octave Step",
+       y = "False Alarm %",
+       # title = "Discrimination across an octave",
+       linetype = "Run #", shape = "Run #",
+       color = "Genotype") +
+  theme_classic() +
+  guides(colour = guide_legend(override.aes = list(linewidth = 1)))
+
+ggsave(filename = "Fmr1 SD FA over time for tone discrimination.svg",
+       path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Progress Report Figs",
+       plot = last_plot(),
+       width = 10, height = 8, units = "in", dpi = 150)
+
+## Hit Rate ----
+
+Discrimination_data %>%
+  filter(detail == "Normal") %>%
+  filter(Type == "Broad") %>%
+  left_join(discrimination_run_count,
+            by = join_by(date, rat_name, rat_ID, file_name)) %>%
+  summarise(hit_percent = mean(hit_percent, na.rm = TRUE) * 100,
+            .by = c(Measure, rat_ID, Genotype, Go_freq, NoGo_freq, detail, Type)) %>%
+  mutate(Go_freq = as.factor(Go_freq)) %>%
+  filter(Measure < 5) %>%
+  mutate(Measure = as.factor(Measure)) %>%
+  ggplot(aes(x = Measure, y = hit_percent, fill = Genotype, group = interaction(Measure, Genotype))) +
+  geom_boxplot() +
+  geom_point(show.legend = FALSE) +
+  stat_summary(fun.data = n_fun, geom = "text", aes(color = Genotype),
+               show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 3) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  ylim(75, 100) +
+  labs(x = "Run #", y = "Hit %",
+       fill = "Genotype") +
+  facet_wrap( ~ Genotype, strip.position = "bottom") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+ggsave(filename = "Fmr1 SD Hit over time for tone discrimination.svg",
+       path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Progress Report Figs",
+       plot = last_plot(),
+       width = 8, height = 10, units = "in", dpi = 150)
+
+## Rxn Rate ----
+
+Discrimination_data %>%
+  filter(detail == "Normal") %>%
+  filter(Type == "Broad") %>%
+  left_join(discrimination_run_count,
+            by = join_by(date, rat_name, rat_ID, file_name)) %>%
+  summarise(reaction = mean(reaction, na.rm = TRUE),
+            .by = c(Measure, rat_ID, Genotype, Go_freq, NoGo_freq, detail, Type)) %>%
+  mutate(Go_freq = as.factor(Go_freq)) %>%
+  filter(Measure < 5) %>%
+  mutate(Measure = as.factor(Measure)) %>%
+  ggplot(aes(x = Measure, y = reaction, fill = Genotype, group = interaction(Measure, Genotype))) +
+  geom_boxplot() +
+  geom_point(show.legend = FALSE) +
+  stat_summary(fun.data = n_fun, geom = "text", aes(color = Genotype),
+               show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 3) +
+  scale_color_manual(values = c("WT" = "black", "KO" = "red")) +
+  scale_fill_manual(values = c("WT" = "darkgrey", "KO" = "red")) +
+  ylim(100, 500) +
+  labs(x = "Run #", y = "Reaction time (Hits only)",
+       fill = "Genotype") +
+  facet_wrap( ~ Genotype, strip.position = "bottom") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+ggsave(filename = "Fmr1 SD Rxn over time for tone discrimination.svg",
+       path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Progress Report Figs",
+       plot = last_plot(),
+       width = 8, height = 10, units = "in", dpi = 150)
+
+
 # dprime ------------------------------------------------------------------
 
 ## graph ====
