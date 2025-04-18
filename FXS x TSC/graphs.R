@@ -32,11 +32,11 @@ Group2 = # c(769, 770, 772, 774) & c(744, 749, 771, 775)
   .$rat_ID %>% # use rat_ID because its unique
   unique # de-duplicate
 
-# Individual Graphs -------------------------------------------------------
+# BBN: Individual Graphs -------------------------------------------------------
 
 Individual_Graphs = 
   core_data %>%
-  filter(! task %in% c("Training", "Reset")) %>%    # Omit Training & Reset days
+  filter(! task %in% c("Reset")) %>%    # Omit Training & Reset days
   filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
   unnest(reaction) %>% 
   mutate(name = rat_name) %>%
@@ -44,7 +44,9 @@ Individual_Graphs =
   do(single_rat_graph = 
        ggplot(data = .,
               aes(x = `Inten (dB)`, y = Rxn * 1000, 
-                  color = as.factor(`Dur (ms)`), linetype = detail)) +
+                  color = as.factor(`Dur (ms)`), linetype = detail, 
+                  shape = as.factor(`Freq (kHz)`),
+                  group = interaction(as.factor(`Dur (ms)`), detail, as.factor(`Freq (kHz)`)))) +
        stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                     fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
                     fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
@@ -53,12 +55,15 @@ Individual_Graphs =
                     geom = "point", position = position_dodge(0.5), size = 2) +
        stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                     geom = "line", position = position_dodge(0.5)) +
+       scale_linetype_manual(values = c("None" = "solid", "Recheck" = "dashed", "Mixed" = "solid")) +
        # geom_smooth(se = FALSE, na.rm = TRUE) +
        labs(x = "Intensity (dB)",
             y = "Reaction time (ms, mean +/- SE)",
             color = "Stim Duration",
             linetype = "Exp. Detail",
+            shape = "Frequency",
             title = glue("{unique(.$rat_name)} ({unique(.$genotype)})")) +
+       facet_wrap(~ stim_type, scales = "free_y") + 
        scale_x_continuous(breaks = seq(0, 90, by = 10)) +
        theme_classic() +
        theme(
@@ -70,17 +75,18 @@ Individual_Graphs =
   ) %>%
   arrange(name)
 
-Individual_Graphs%>%
+Individual_Graphs %>%
   # filter(rat_ID %in% Group1) %>%
-  filter(name %in% c("Orange2", "Orange3", "Orange4", #Orange1, #(Group 1.1)
+  filter(name %in% c("Orange2", "Orange3", "Orange4", #Orange1, #(Group 1.1), 
                      "Lime1", "Lime2", "Orange5", "Orange6",  #still in training (Group 1.2)
                      "Blue1", "Blue2", "Purple6", "Lime6")) %>% #(Group 1.3)
   .$single_rat_graph
 
 # TH Graph ----------------------------------------------------------------
 
-## TH by Genotype ----
+## BBN TH by Genotype ----
 TH_table %>%
+  filter(Frequency == 0) %>%
   mutate(Duration = as.factor(Duration)) %>%
   ggplot(aes(x = Duration, y = TH,
              fill = genotype, group = interaction(Duration, genotype))) +
@@ -100,7 +106,7 @@ TH_table %>%
     panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
 
-## TH by Duration ----
+## BBN TH by Duration ----
 TH_table %>%
   mutate(Duration = as.factor(Duration)) %>%
   ggplot(aes(x = genotype, y = TH,
@@ -122,9 +128,33 @@ TH_table %>%
   )
 
 
+## Tones TH by Genotype ----
+TH_table %>%
+  filter(Duration == 50) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
+  ggplot(aes(x = Frequency, y = TH,
+             fill = genotype, group = interaction(Duration, genotype))) +
+  geom_boxplot(position = position_dodge(1), linewidth = 1, width = 0.8) +
+  # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
+  stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
+               position = position_dodge(1), vjust = 2, size = 3) +
+  scale_fill_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
+                               "TSC only" = "deepskyblue", "FXS only" = "red")) +
+  labs(x = "",
+       y = "Threshold (dB, mean +/- SE)",
+       fill = "Genotype") +
+  facet_wrap( ~ genotype, ncol = 5, scales = "free_x") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
 # Reaction time -----------------------------------------------------------
 
+## BBN ----
 Rxn_table %>%
+  filter(Frequency == 0) %>%
   filter(Intensity >= 20) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
   # filter(! str_detect(Intensity, pattern = "5$")) %>%
@@ -154,6 +184,7 @@ Rxn_table %>%
 
 ## Temporal Integration ----
 Rxn_table %>%
+  filter(Frequency == 0) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
   filter(Intensity >= 20) %>%
   # filter(! str_detect(Intensity, pattern = "5$")) %>%
@@ -175,6 +206,37 @@ Rxn_table %>%
                                 "TSC only" = "deepskyblue", "FXS only" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
   facet_wrap(~ genotype) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
+
+
+## Tones ----
+Rxn_table %>%
+  filter(Duration == 50) %>%
+  filter(Intensity >= 20) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
+  # filter(! str_detect(Intensity, pattern = "5$")) %>%
+  ggplot(aes(x = Intensity, y = Rxn,
+             color = genotype, group = interaction(Frequency, genotype))) +
+  ## Lines for each group
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1.5, position = position_dodge(1)) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(1), size = 3) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "line", position = position_dodge(1)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "") +
+  scale_color_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
+                                "TSC only" = "deepskyblue", "FXS only" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(~ Frequency, ncol = 2) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
