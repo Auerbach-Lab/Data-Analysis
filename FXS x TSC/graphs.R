@@ -187,7 +187,7 @@ Rxn_table %>%
 Rxn_table %>%
   filter(Frequency == 0) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
-  filter(Intensity >= 20) %>%
+  filter(Intensity >= 40) %>%
   # filter(! str_detect(Intensity, pattern = "5$")) %>%
   ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(Duration),
              color = genotype, group = interaction(Duration, genotype))) +
