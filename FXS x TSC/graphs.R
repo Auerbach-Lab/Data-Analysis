@@ -226,11 +226,11 @@ Rxn_table %>%
   stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
                fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
-               geom = "errorbar", width = 1.5, position = position_dodge(1)) +
+               geom = "errorbar", width = 1.5, position = position_dodge(0.5)) +
   stat_summary(fun = function(x) mean(x, na.rm = TRUE),
-               geom = "point", position = position_dodge(1), size = 3) +
+               geom = "point", position = position_dodge(0.5), size = 3) +
   stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
-               geom = "line", position = position_dodge(1)) +
+               geom = "line", position = position_dodge(0.5)) +
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
        color = "Genotype", linetype = "") +
