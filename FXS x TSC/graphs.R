@@ -32,13 +32,14 @@ Group2 = # c(769, 770, 772, 774) & c(744, 749, 771, 775)
   .$rat_ID %>% # use rat_ID because its unique
   unique # de-duplicate
 
-# BBN: Individual Graphs -------------------------------------------------------
+# Individual Graphs -------------------------------------------------------
 
 Individual_Graphs = 
   core_data %>%
   filter(! task %in% c("Reset")) %>%    # Omit Training & Reset days
   filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
   unnest(reaction) %>% 
+    filter(! (stim_type == "tone" & `Dur (ms)` %in% c(300, 100))) %>%    # Only have 50ms for tone data
   mutate(name = rat_name) %>%
   group_by(rat_ID, name) %>%
   do(single_rat_graph = 
@@ -63,7 +64,7 @@ Individual_Graphs =
             linetype = "Exp. Detail",
             shape = "Frequency",
             title = glue("{unique(.$rat_name)} ({unique(.$genotype)})")) +
-       facet_wrap(~ stim_type, scales = "free_y") + 
+       facet_wrap(~ stim_type, scales = "free_y", nrow = 2) + 
        scale_x_continuous(breaks = seq(0, 90, by = 10)) +
        theme_classic() +
        theme(
