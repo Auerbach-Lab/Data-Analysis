@@ -201,6 +201,130 @@ stats_table =
             FA_percent = mean(FA_percent, na.rm = TRUE),
             .groups = "drop")
 
+names(stats_table)
+
+## Stats ----
+
+### Overall ANOVA ----
+discriptive_stats_aov = aov(value ~ Genotype * task * stat,
+                            data = stats_table %>%
+                              filter(detail == "Normal") %>%
+                              filter(task != "Reset") %>%
+                              gather(key = "stat", value = "value", c(trial_count:FA_percent)))
+
+Parametric_Check(discriptive_stats_aov)
+
+summary(discriptive_stats_aov)
+
+broom::tidy(TukeyHSD(discriptive_stats_aov)) %>% 
+  mutate(sig = gtools::stars.pval(adj.p.value)) %>%
+  mutate(Comp1 = str_split_fixed(.$contrast, '-', 2)[,1],
+         Comp2 = str_split_fixed(.$contrast, '-', 2)[,2],
+         geno1 = str_split_fixed(Comp1, ':', 3)[,1],
+         octave_step1 = str_split_fixed(Comp1, ':', 3)[,2] %>% as.numeric(),
+         geno2 = str_split_fixed(Comp2, ':', 3)[,1],
+         octave_step2 = str_split_fixed(Comp2, ':', 3)[,2] %>% as.numeric(),)
+
+### Non-parametric ----
+# Kruskal Testing - Main effects only 
+lapply(c("Genotype", "stat", "task" # Main effects
+), 
+function(x) kruskal.test(reformulate(x, "value"),
+                         data = stats_table %>%
+                           filter(detail == "Normal") %>%
+                           filter(task != "Reset") %>%
+                           gather(key = "stat", value = "value", c(trial_count:FA_percent)))) %>% 
+  # Convert to table
+  do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "bonf"),
+         sig = gtools::stars.pval(adj.p.value)) %>%
+  select(method, parameter, statistic, data.name, p.value, adj.p.value, sig) %>%
+  View
+
+### Post-Hoc Dunn's Test ----
+FSA::dunnTest(value ~ interaction(Genotype, stat, task),
+              data = stats_table %>%
+                filter(detail == "Normal") %>%
+                filter(task != "Reset") %>%
+                gather(key = "stat", value = "value", c(trial_count:FA_percent)),
+              method = "bonf") %>%
+  .$res %>%
+  as_tibble() %>%
+  select(-P.unadj) %>%
+  mutate(Sig = gtools::stars.pval(P.adj),
+         Comp1 = str_split_fixed(.$Comparison, ' - ', 2)[,1],
+         Comp2 = str_split_fixed(.$Comparison, ' - ', 2)[,2],
+         geno1 = str_split_fixed(Comp1, '\\.', 3)[,1],
+         stat1 = str_split_fixed(Comp1, '\\.', 3)[,2],
+         task1 = str_split_fixed(Comp1, '\\.', 3)[,3],
+         geno2 = str_split_fixed(Comp2, '\\.', 3)[,1],
+         stat2 = str_split_fixed(Comp2, '\\.', 3)[,2],
+         task2 = str_split_fixed(Comp1, '\\.', 3)[,3]) %>%
+  # only compare within a sex (sib-sib direct comparison)
+  filter(stat1 == stat2) %>%
+  arrange(stat1) %>%
+  # filter(! Sig %in% c(" ", ".")) %>%
+  select(-Comp1, -Comp2, -stat2) %>%
+  relocate(Comparison, .after = task2) %>%
+  View
+
+### trials ----
+Parametric_Check(aov(trial_count ~ Genotype * task, 
+                     data = stats_table %>%
+                       filter(detail == "Normal") %>%
+                       filter(task != "Reset")))
+
+summary(aov(trial_count ~ Genotype * task, 
+            data = stats_table %>%
+              filter(detail == "Normal") %>%
+              filter(task != "Reset")))
+
+Parametric_Check(aov(trial_count ~ Genotype, data = filter(stats_table, detail == "Normal")))
+
+trials = t.test(trial_count ~ Genotype, data = filter(stats_table, detail == "Normal"))
+
+### hit % ----
+Parametric_Check(aov(hit_percent ~ Genotype * task, 
+                     data = stats_table %>%
+                       filter(detail == "Normal") %>%
+                       filter(task != "Reset")))
+
+#### Non-parametric ----
+# Kruskal Testing - Main effects only 
+lapply(c("Genotype", "task" # Main effects
+), 
+function(x) kruskal.test(reformulate(x, "hit_percent"),
+                         data = stats_table %>%
+                           filter(detail == "Normal") %>%
+                           filter(task != "Reset"))) %>% 
+  # Convert to table
+  do.call(rbind, .) %>% as_tibble() %>% mutate_all(unlist) %>%
+  # do a p adjustment and then sig label
+  mutate(adj.p.value = p.adjust(p.value, "bonf"),
+         sig = gtools::stars.pval(adj.p.value)) %>%
+  select(method, parameter, statistic, data.name, p.value, adj.p.value, sig)
+
+Parametric_Check(aov(hit_percent ~ Genotype, data = filter(stats_table, detail == "Normal")))
+
+hit = wilcox.test(hit_percent ~ Genotype, data = filter(stats_table, detail == "Normal"))
+
+### FA % ----
+Parametric_Check(aov(FA_percent ~ Genotype * task, 
+                     data = stats_table %>%
+                       filter(detail == "Normal") %>%
+                       filter(task != "Reset")))
+
+summary(aov(FA_percent ~ Genotype * task, 
+            data = stats_table %>%
+              filter(detail == "Normal") %>%
+              filter(task != "Reset")))
+
+Parametric_Check(aov(FA_percent ~ Genotype, data = filter(stats_table, detail == "Normal")))
+
+FA = t.test(FA_percent ~ Genotype, data = filter(stats_table, detail == "Normal"))
+
+
 ## Graph General Stats ----
 stats_plot = 
 stats_table %>%
