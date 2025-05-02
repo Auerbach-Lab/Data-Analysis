@@ -737,6 +737,27 @@ ggsave(filename = "Fmr1 SD d' for tone discrimination.svg",
 
 # Reaction time -----------------------------------------------------------
 
+## Data -----
+Reaction_data = 
+  Discrimination_data %>%
+  # remove any duplicates caused by unnesting
+  select(rat_ID, reaction, Type, detail, Genotype, UUID) %>% unique %>%
+  reframe(reaction = mean(reaction, na.rm = TRUE),
+          .by = c(rat_ID, detail, Genotype, Type)) %>%
+  filter(Type != "Error")
+
+Reaction_data_all =
+dataset %>%
+  filter(analysis_type != "Tone (Single)") %>%
+  filter(! UUID %in% c("20220524131400_3.20000275969505_2.54809614344128", 
+                       "20220524131536_1.86199955642223_1.27680285486574",
+                       "20220524131834_3.12200076878071_2.5273481894502")) %>%
+  # get reaction time
+  mutate(reaction = map_dbl(reaction, pluck, "Rxn")*1000) %>%
+  # Get Averages
+  summarise(reaction = mean(reaction, na.rm = TRUE),
+            .by = c(rat_ID, rat_name, Genotype, task, detail))
+
 ## Averages ----
 Reaction_data %>%
   filter(detail == "Normal") %>%
@@ -770,6 +791,27 @@ dataset %>%
           .by = c(Genotype))
 
 ## Rxn stats -----
+### Overall ANOVA ----
+Reaction_data_all$Gaus = LambertW::Gaussianize(Reaction_data_all$reaction)[, 1]
+
+rxn_overall_aov = aov(reaction ~ Genotype * task,
+                            data = Reaction_data_all)
+
+rxn_overall_aov_gaus = aov(Gaus ~ Genotype * task,
+                           data = Reaction_data_all)
+
+Parametric_Check(rxn_overall_aov_gaus)
+
+summary(rxn_overall_aov_gaus)
+
+broom::tidy(TukeyHSD(rxn_overall_aov_gaus)) %>% 
+  mutate(sig = gtools::stars.pval(adj.p.value)) %>%
+  mutate(Comp1 = str_split_fixed(.$contrast, '-', 2)[,1],
+         Comp2 = str_split_fixed(.$contrast, '-', 2)[,2],
+         geno1 = str_split_fixed(Comp1, ':', 3)[,1],
+         octave_step1 = str_split_fixed(Comp1, ':', 3)[,2] %>% as.numeric(),
+         geno2 = str_split_fixed(Comp2, ':', 3)[,1],
+         octave_step2 = str_split_fixed(Comp2, ':', 3)[,2] %>% as.numeric(),)
 
 ### 2 days after training ----
 Reaction_2days = 
@@ -827,15 +869,6 @@ Parametric_Check(aov(reaction ~ Genotype, data = Reaction_discrim))
 t.test(reaction ~ Genotype, data = Reaction_discrim)
 
 ### Old stats ----
-
-Reaction_data = 
-  Discrimination_data %>%
-  # remove any duplicates caused by unnesting
-  select(rat_ID, reaction, Type, detail, Genotype, UUID) %>% unique %>%
-  reframe(reaction = mean(reaction, na.rm = TRUE),
-          .by = c(rat_ID, detail, Genotype, Type)) %>%
-  filter(Type != "Error")
-
 Reaction.aov.data = Reaction_data %>%
   filter(detail == "Normal")
 
