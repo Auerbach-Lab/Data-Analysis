@@ -95,6 +95,15 @@ n_fun <- function(x){
 }
 
 
+# Parametric test ---------------------------------------------------------
+Parametric_Check <- function(AOV.data) {
+  is_parametric = shapiro.test(AOV.data$residuals)$p.value > 0.05
+  
+  if (is_parametric == TRUE) {writeLines("Normal data proced with ANOVA")} else
+  {writeLines(paste("Non-parametric data so use Kruskal followed by Dunn testing. \nShapiro Test: p =", shapiro.test(AOV.data$residuals)$p.value %>% round(digits = 3)))}
+  
+}
+
 # Trial counts ------------------------------------------------------------
 
 ## Daily Trail Count by Freq --- 
@@ -636,16 +645,73 @@ dataset %>%
           SE = FSA::se(reaction, na.rm = TRUE),
           .by = c(Genotype))
 
+## Rxn stats -----
+
+### 2 days after training ----
+Reaction_2days = 
+  dataset %>% 
+  filter(task == "Holding") %>%
+  filter(detail == "Normal") %>%
+  # Select 1st 5 days on holding
+  group_by(rat_ID, rat_name, task, detail) %>%
+  do(arrange(., desc(date)) %>%
+       # Select most recent days for each frequency and task
+       head(n = 2))  %>%
+  ungroup %>%
+  mutate(reaction = map_dbl(reaction, pluck, "Rxn")*1000) %>%
+  reframe(reaction = mean(reaction, na.rm = TRUE),
+          n = n(),
+          .by = c(rat_ID, rat_name, detail, Genotype))
+
+Parametric_Check(aov(reaction ~ Genotype, data = Reaction_2days))
+
+t.test(reaction ~ Genotype, data = Reaction_2days)
+
+### 5 days before reverse ----
+
+Reaction_5days = 
+  dataset %>% 
+  filter(task == "Holding") %>%
+  filter(detail == "Normal") %>%
+  # Select 1st 5 days on holding
+  group_by(rat_ID, rat_name, task, detail) %>%
+  do(arrange(., desc(date)) %>%
+       # Select most recent days for each frequency and task
+       tail(n = 5))  %>%
+  ungroup %>%
+  mutate(reaction = map_dbl(reaction, pluck, "Rxn")*1000) %>%
+  reframe(reaction = mean(reaction, na.rm = TRUE),
+          n = n(),
+          .by = c(rat_ID, rat_name, detail, Genotype))
+
+Parametric_Check(aov(reaction ~ Genotype, data = Reaction_5days))
+
+t.test(reaction ~ Genotype, data = Reaction_5days)
+
+### Discrimination days -----
+Reaction_discrim = 
+  dataset %>% 
+  filter(task == "Discrimination") %>%
+  filter(detail == "Normal") %>%
+  mutate(reaction = map_dbl(reaction, pluck, "Rxn")*1000) %>%
+  reframe(reaction = mean(reaction, na.rm = TRUE),
+          n = n(),
+          .by = c(rat_ID, rat_name, detail, Genotype))
+
+Parametric_Check(aov(reaction ~ Genotype, data = Reaction_discrim))
+
+t.test(reaction ~ Genotype, data = Reaction_discrim)
+
+### Old stats ----
+
 Reaction_data = 
   Discrimination_data %>%
-    # remove any duplicates caused by unnesting
-    select(rat_ID, reaction, Type, detail, Genotype, UUID) %>% unique %>%
-    reframe(reaction = mean(reaction, na.rm = TRUE),
-            .by = c(rat_ID, detail, Genotype, Type)) %>%
-    filter(Type != "Error")
+  # remove any duplicates caused by unnesting
+  select(rat_ID, reaction, Type, detail, Genotype, UUID) %>% unique %>%
+  reframe(reaction = mean(reaction, na.rm = TRUE),
+          .by = c(rat_ID, detail, Genotype, Type)) %>%
+  filter(Type != "Error")
 
-
-## Rxn stats -----
 Reaction.aov.data = Reaction_data %>%
   filter(detail == "Normal")
 
@@ -653,17 +719,12 @@ Reaction.aov.data$Gaus = LambertW::Gaussianize(Reaction.aov.data$reaction)[, 1]
 
 Rxn.aov = aov(reaction ~ Genotype * Type, data = Reaction.aov.data)
 
-Parametric_Check <- function(AOV.data) {
-  is_parametric = shapiro.test(AOV.data$residuals)$p.value > 0.05
-  
-  if (is_parametric == TRUE) {writeLines("Normal data proced with ANOVA")} else
-  {writeLines(paste("Non-parametric data so use Kruskal followed by Dunn testing. \nShapiro Test: p =", shapiro.test(AOV.data$residuals)$p.value %>% round(digits = 3)))}
-  
-}
-
 Parametric_Check(Rxn.aov)
 
 summary(Rxn.aov)
+
+broom::tidy(TukeyHSD(Rxn.aov)) %>% 
+  mutate(sig = gtools::stars.pval(adj.p.value))
 
 ## Rxn Graph ----
 Reaction_data %>%
