@@ -135,7 +135,7 @@ TH_table %>%
   filter(Duration == 50) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
   ggplot(aes(x = Frequency, y = TH,
-             fill = genotype, group = interaction(Duration, genotype))) +
+             fill = genotype, group = interaction(Frequency, genotype))) +
   geom_boxplot(position = position_dodge(1), linewidth = 1, width = 0.8) +
   # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
   stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
