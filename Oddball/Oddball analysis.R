@@ -1,4 +1,3 @@
-
 # Variables ---------------------------------------------------------------
 # Location of the datasets
 projects_folder = "Z:/Behavior-autoanalysis/"
@@ -239,7 +238,7 @@ Probe_results =
           .by = c(rat_ID, rat_name, Genotype, task, phase, detail)) %>%
   arrange(rat_ID)
 
-filter(Probe_results, rat_ID > 300) %>% View
+filter(Probe_results, rat_name %in% c("Purple1", "Purple2")) %>% View
 
 
 # Get Reaction times by rat -----------------------------------------------
