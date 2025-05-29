@@ -37,7 +37,7 @@ Group2 = # c(769, 770, 772, 774) & c(744, 749, 771, 775)
 Individual_Graphs = 
   core_data %>%
   filter(! task %in% c("Reset")) %>%    # Omit Training & Reset days
-  filter(! task %in% c("Training")) %>%    # Omit Training & Reset days
+  # filter(! task %in% c("Training")) %>%    # Omit Training & Reset days
   filter(FA_percent < FA_cutoff) %>%    # Omit days with > 45% FA, i.e. guessing
   unnest(reaction) %>% 
     filter(! (stim_type == "tone" & `Dur (ms)` %in% c(300, 100))) %>%    # Only have 50ms for tone data
@@ -57,7 +57,7 @@ Individual_Graphs =
                     geom = "point", position = position_dodge(0.5), size = 2) +
        stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                     geom = "line", position = position_dodge(0.5)) +
-       scale_linetype_manual(values = c("None" = "solid", "Recheck" = "dashed", "Mixed" = "solid")) +
+       scale_linetype_manual(values = c("None" = "solid", "Recheck" = "dashed", "Mixed" = "solid", "Alone" = "dashed")) +
        # geom_smooth(se = FALSE, na.rm = TRUE) +
        labs(x = "Intensity (dB)",
             y = "Reaction time (ms, mean +/- SE)",
@@ -110,6 +110,7 @@ TH_table %>%
 
 ## BBN TH by Duration ----
 TH_table %>%
+  filter(Frequency == 0) %>%
   mutate(Duration = as.factor(Duration)) %>%
   ggplot(aes(x = genotype, y = TH,
              fill = genotype, group = genotype)) +
@@ -133,7 +134,8 @@ TH_table %>%
 ## Tones TH by Genotype ----
 TH_table %>%
   filter(Duration == 50) %>%
-  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% 
+           factor(c("4", "8", "16", "32", "BBN"))) %>%
   ggplot(aes(x = Frequency, y = TH,
              fill = genotype, group = interaction(Frequency, genotype))) +
   geom_boxplot(position = position_dodge(1), linewidth = 1, width = 0.8) +
@@ -218,7 +220,7 @@ Rxn_table %>%
 ## Tones ----
 Rxn_table %>%
   filter(Duration == 50) %>%
-  filter(Intensity >= 20) %>%
+  filter(Intensity >= 25) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
   # filter(! str_detect(Intensity, pattern = "5$")) %>%
   ggplot(aes(x = Intensity, y = Rxn,
