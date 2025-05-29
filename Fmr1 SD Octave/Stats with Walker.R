@@ -269,6 +269,10 @@ FA_bin_stats_data %>%
 #        plot = last_plot(),
 #        width=10, height=8)
 
+# fwrite(FA_bin_stats_data, 
+#        "C:/Users/Noelle/Box/manuscript_tone_discrim_2025/final_docs/csvs_for_stats_check/updated_versions/Fig1I_data.csv", 
+#        row.names = FALSE)
+
 ## Stats ----
 FA_bin_aov =
 aov(FA_percent_detailed ~ Genotype * bin,
