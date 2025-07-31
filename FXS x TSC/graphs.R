@@ -160,6 +160,7 @@ TH_table %>%
 Rxn_table %>%
   filter(Frequency == 0) %>%
   filter(Intensity >= 20) %>%
+  # filter(rat_name != "Blue2") %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
   # filter(! str_detect(Intensity, pattern = "5$")) %>%
   ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(Duration),
