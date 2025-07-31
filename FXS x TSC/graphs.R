@@ -131,7 +131,7 @@ TH_table %>%
   )
 
 
-## Tones TH by Genotype ----
+## Tones TH by Frequency ----
 TH_table %>%
   filter(Duration == 50) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% 
@@ -147,7 +147,7 @@ TH_table %>%
   labs(x = "",
        y = "Threshold (dB, mean +/- SE)",
        fill = "Genotype") +
-  facet_wrap( ~ genotype, ncol = 5, scales = "free_x") +
+  facet_wrap( ~ Frequency, ncol = 5, scales = "free_x") +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
