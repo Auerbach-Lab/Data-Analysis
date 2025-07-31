@@ -240,14 +240,13 @@ Probe_results =
 
 filter(Probe_results, rat_name %in% c("Purple1", "Purple2")) %>% View
 
-
 # Get Reaction times by rat -----------------------------------------------
 
 cat("getting reaction times...")
 
 Rxn_table = Daily_summary_from_trials_by_position %>%
   # Use rat_ID because its sure to be unique
-  group_by(rat_ID, rat_name, Sex, Genotype, task, detail, phase, go, Position) %>%
+  group_by(rat_ID, rat_name, Sex, Genotype, task, detail, phase, go, Position, Response) %>%
   # Get Averages
   transmute(Rxn = mean(Rxn, na.rm = TRUE)) %>% 
   unique() %>%

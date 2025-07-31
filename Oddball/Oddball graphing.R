@@ -52,6 +52,37 @@ Rxn_table %>%
   )
 
 
+# Tone-BBN ----------------------------------------------------------------
+
+## Individual graphs (manual) -----
+individual_graphs = Rxn_table %>%
+  filter(rat_name %in% c("Silver3", "Silver4", "Silver5", "Silver6")) %>%
+  filter(Response == "Hit") %>%
+  filter(phase == "Tone-BBN") %>%
+  filter(task == "Base case") %>%
+  group_by(rat_ID) %>%
+  do(
+    plot = ggplot(., aes(x = Position, y = Rxn)) +
+      # geom_point(alpha = 0.3)+
+      stat_summary(fun = mean,
+                   fun.min = function(x) mean(x) - se(x),
+                   fun.max = function(x) mean(x) + se(x),
+                   geom = "errorbar", width = 0, position = position_dodge(0.1)) +
+      stat_summary(fun = mean,
+                   geom = "point", position = position_dodge(0.1), size = 3) +
+      stat_summary(fun = mean, geom = "line", position = position_dodge(0.1))  +
+      labs(title = glue("{unique(.$rat_name)} ({str_remove(unique(.$Genotype), pattern = 'Fmr1-LE_')}) Tone-BBN")) +
+      # ylim(-100, 50) +
+      # facet_wrap(~ go) +
+      scale_x_continuous(breaks = seq(1, 10, by = 1)) +
+      theme_classic() +
+      theme(
+        plot.title = element_text(hjust = 0.5),
+        panel.grid.major.x = element_line(color = "white")
+      )
+  )
+
+individual_graphs$plot
 
 # Frequencies ---------------------------------------------------
 
@@ -78,7 +109,7 @@ Rxn_Tone_On_Tone %>%
   )
 
 ## Individual graphs -----
-individual_graphs = Rxn %>%
+individual_graphs_Tone_on_Tone = Rxn %>%
   filter(rat_ID %in% Tone_on_Tone_rats) %>%
   filter(task %in% c("Base case")) %>% 
   group_by(date, rat_ID, rat_name, Sex, Genotype, task, detail, phase, go, no_go) %>%
@@ -109,7 +140,7 @@ individual_graphs = Rxn %>%
       )
   )
 
-individual_graphs$plot
+individual_graphs_Tone_on_Tone$plot
 
 # FXS Rxn for Base case by genotype -------------------------------------------
 FXS_baseline_hit_reaction %>%
