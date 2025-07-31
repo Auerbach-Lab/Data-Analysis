@@ -188,13 +188,14 @@ Rxn_table %>%
   ) 
 
 ## Temporal Integration ----
-Rxn_table %>%
+Rxn_table_detail %>%
   filter(Frequency == 0) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
   filter(Intensity >= 40) %>%
   # filter(! str_detect(Intensity, pattern = "5$")) %>%
   ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(Duration),
-             color = genotype, group = interaction(Duration, genotype))) +
+             shape = detail,
+             color = genotype, group = interaction(Duration, genotype, detail))) +
   ## Lines for each group
   stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
@@ -210,7 +211,7 @@ Rxn_table %>%
   scale_color_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
                                 "TSC only" = "deepskyblue", "FXS only" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
-  facet_wrap(~ genotype) +
+  facet_wrap(genotype ~ detail) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
@@ -221,7 +222,7 @@ Rxn_table %>%
 ## Tones ----
 Rxn_table %>%
   filter(Duration == 50) %>%
-  filter(Intensity >= 25) %>%
+  filter(Intensity >= 40) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
   # filter(! str_detect(Intensity, pattern = "5$")) %>%
   ggplot(aes(x = Intensity, y = Rxn,

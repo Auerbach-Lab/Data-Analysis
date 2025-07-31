@@ -153,6 +153,20 @@ Rxn_table_over_TH = Rxn_table %>%
   mutate(Rxn = mean(Rxn, na.rm = TRUE)) %>% 
   unique()
 
+Rxn_table_detail = core_data %>%
+  # Omit Training & Reset days
+  dplyr::filter(! task %in% c("Training", "Reset")) %>%
+  # Omit days with > 45% FA, i.e. guessing
+  filter(FA_percent < FA_cutoff) %>%
+  # Get Reaction times:
+  unnest(reaction) %>%
+  # Use rat_ID because its sure to be unique
+  group_by(rat_ID, rat_name, sex, genotype, phase, task, detail, `Freq (kHz)`, `Dur (ms)`, `Inten (dB)`) %>%
+  # Get Averages
+  transmute(Rxn = mean(Rxn, na.rm = TRUE) * 1000) %>% 
+  unique() %>%
+  rename(Frequency = `Freq (kHz)`, Duration = `Dur (ms)`, Intensity = `Inten (dB)`)
+
 
 # Time to learning --------------------------------------------------------
 # cat("learning times...")
