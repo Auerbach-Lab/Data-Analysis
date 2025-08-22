@@ -34,6 +34,7 @@ Rapa_rxn_data_limited %>%
                geom = "line", position = position_dodge(0.5), linewidth = 1) +
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
+       caption = "In full Tsc2 group males are faster and females have no change from WT sisters. Its the opposite here.",
        color = "Genotype", linetype = "Treatment") +
   scale_linetype_manual(values = c("Baseline" = "solid", "Vehicle" = "dotted")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
@@ -135,7 +136,7 @@ ggplot(data = TH_table %>%
                                                    "Post Treatment", "3+w Post Treatment"),
                                 labels = c("Baseline", "Vehicle", "Rapamycin",
                                            "Recovery", "Permanent"))),
-       aes(x = genotype, y = TH, fill = genotype, color = sex)) +
+       aes(x = detail, y = TH, fill = genotype, color = sex)) +
   geom_boxplot(linewidth = 1, width = 0.8) +
   # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
   stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE,
@@ -459,7 +460,7 @@ Rapa_rxn_data_limited %>%
                geom = "line", position = position_dodge(0.5)) +
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
-       # title = glue("Wildtype"),
+       title = glue("Wildtype"),
        color = "Treatment", linetype = "Treatment") +
   scale_color_manual(values = c("Baseline" = "black", "Vehicle" = "blue",
                                 "Rapamycin" = "red", "Recovery" = "darkviolet",
@@ -475,7 +476,7 @@ Rapa_rxn_data_limited %>%
 
 
 # Het graph ---------------------------------------------------------------
-Rapa_rxn_data_limited%>%
+Rapa_rxn_data_limited %>%
   filter(genotype == "Het") %>%
   filter(detail %in% c( "Baseline", "Vehicle", "Rapamycin", "Recovery", "Permanent")) %>%
   filter(`Inten (dB)` > 15) %>%
