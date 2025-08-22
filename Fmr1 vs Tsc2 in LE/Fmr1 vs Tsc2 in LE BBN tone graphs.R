@@ -3,6 +3,8 @@
 
 drop_TP3 = TRUE
 
+save_folder = "C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Fmr1 vs Tsc2 in LE"
+
 # Graphing ----------------------------------------------------------------
 # Calculate standard error (SE) like standard deviation (SD)
 se <- function(x, ...) {sqrt(var(x, ...)/length(x))}
@@ -53,20 +55,36 @@ single_Frequency = "BBN"
 Rxn_plot_data %>%
   filter(Intensity < 90 & Intensity > 10) %>%
   filter(Frequency == single_Frequency) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
+  mutate(group = case_when(detail == "Recheck" & line == "Tsc2-LE" ~ "Group 2 Recheck",
+                           rat_ID < 300  & line == "Tsc2-LE" ~ "Group 1",
+                           rat_ID >= 300 & rat_ID < 328 & line == "Tsc2-LE" ~ "Group 2",
+                           rat_ID >= 328 & line == "Tsc2-LE" ~ "Group 3",
+                           line == "Fmr1-LE" ~ "Fmr1",
+                           .default = "Unknown")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3", "Fmr1")) %>%
   Rxn_Plotter() +
-  facet_wrap( ~ detail, ncol = 3, scales = "fixed") +
+  facet_wrap( ~ `Dur (ms)`, ncol = 3, scales = "fixed") +
   labs(title = single_Frequency) +
   theme(legend.position = c(0.88, 0.8),
         legend.background=element_blank())
 
 ggsave(filename = paste0("Rxn_", single_Frequency,".jpg"),
+       path = save_folder,
        plot = last_plot(),
        width = 8, height = 6, units = "in", dpi = 300)
 
 # All Frequencies Graph
 Rxn_plot_data %>%
   filter(Intensity > 5) %>%
-  filter(detail == "Alone") %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
+  mutate(group = case_when(detail == "Recheck" & line == "Tsc2-LE" ~ "Group 2 Recheck",
+                           rat_ID < 300  & line == "Tsc2-LE" ~ "Group 1",
+                           rat_ID >= 300 & rat_ID < 328 & line == "Tsc2-LE" ~ "Group 2",
+                           rat_ID >= 328 & line == "Tsc2-LE" ~ "Group 3",
+                           line == "Fmr1-LE" ~ "Fmr1",
+                           .default = "Unknown")) %>%
+  filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3", "Fmr1")) %>%
   mutate(Frequency = factor(Frequency, levels = c("4", "8", "BBN", "16", "32")),
          Type = if_else(Frequency == "BBN", "BBN", "Tones")) %>%
   Rxn_Plotter() +
@@ -75,6 +93,7 @@ Rxn_plot_data %>%
         legend.background=element_blank())
 
 ggsave(filename = "Rxn_overall.jpg",
+       path = save_folder,
        plot = last_plot(),
        width = 11, height = 4.8, units = "in", dpi = 300)
 
@@ -108,9 +127,9 @@ TH_table %>%
 TH_table %>%
   filter(Frequency == 0 & Duration == 50) %>%
   {if (drop_TP3) filter(., rat_name != "TP3")} %>%
-  filter(detail != "Rotating") %>%
+  filter(detail %in% c("Alone", "Mixed", "Rotating")) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% factor(levels = c("BBN", "4", "8", "16", "32"))) %>%
-  ggplot(aes(x = detail, y = TH, fill = genotype, color = line, group = detail)) +
+  ggplot(aes(x = genotype, y = TH, fill = genotype, color = line, group = interaction(line, genotype))) +
   geom_boxplot(position = position_dodge(1), linewidth = 1, width = 0.8) +
   stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, position = position_dodge(1), vjust = 2, size = 3) +
   scale_color_manual(values = c("Tsc2-LE" = "darkblue", "Fmr1-LE" = "red")) +
@@ -118,14 +137,15 @@ TH_table %>%
   labs(y = "Threshold (dB, mean +/- SE)",
        caption = if_else(drop_TP3, "Without Het F TP3", "With TP3"),
        fill = "Genotype") +
-  facet_wrap( ~ interaction(line, genotype), ncol = 5, scales = "free_x") +
+  # facet_wrap( ~ interaction(line, genotype), ncol = 5, scales = "free_x") +
+  facet_wrap( ~ detail, ncol = 5, scales = "free_x") +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
 
-ggsave(filename = "TH.jpg",
+ggsave(filename = "TH_updated.jpg",
+       path = save_folder,
        plot = last_plot(),
        width = 8, height = 6, units = "in", dpi = 300)
-
