@@ -185,6 +185,45 @@ TH_table %>%
     panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
 
+## Threshold by sex -----
+TH_table %>%
+  filter(line == "Tsc2-LE") %>%
+  {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
+  filter(Frequency == 0) %>%
+  filter(detail %in% c("Alone", "Recheck", "None")) %>%
+  mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                           rat_ID < 300 ~ "Group 1",
+                           rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                           rat_ID >= 328 ~ "Group 3",
+                           .default = "Unknown")) %>%
+  filter(group %in% c("Group 2 Recheck", "Group 1", "Group 3")) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN") %>% 
+           factor(levels = c("BBN", "4", "8", "16", "32"))) %>%
+  ggplot(aes(x = sex, y = TH,
+             fill = genotype, color = sex, group = interaction(sex, genotype))) +
+  geom_boxplot(position = position_dodge(1), linewidth = 1, width = 0.8) +
+  # geom_point(aes(color = genotype), alpha = 0.3, position = position_dodge(1)) +
+  stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE, 
+               position = position_dodge(1), vjust = 2, size = 3) +
+  scale_color_manual(values = c("Male" = "darkblue", "Female" = "black")) +
+  scale_fill_manual(values = c("WT" = "grey40", "Het" = "deepskyblue", "KO" = "lightcoral")) +
+  labs(x = "",
+       y = "Threshold (dB, mean +/- SE)",
+       caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats"),
+       fill = "Genotype",
+       color = "Sex") +
+  facet_wrap( ~ Duration, ncol = 5, scales = "free_x") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  )
+
+# ggsave(filename = "Thresholds (BBN durations) for Tsc2 by sex.jpg",
+#        path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Tsc2 LE Experiments",
+#        plot = last_plot(),
+#        width = 10, height = 8, units = "in", dpi = 300)
+
 ## Threshold by Frequency -----
 TH_table %>%
   filter(line == "Tsc2-LE") %>%
@@ -257,6 +296,12 @@ Tsc2_TH_overview_gaph =
     )
 
 print(Tsc2_TH_overview_gaph)
+
+# ggsave(filename = "Thresholds for BBN durations in Tsc2 (summary fig).jpg",
+#         path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Tsc2 LE Experiments",
+#         plot = Tsc2_TH_overview_gaph,
+#         width = 10, height = 8, units = "in", dpi = 300)
+
 
 ## Threshold by group/sex ---
 TH_table %>%
@@ -464,8 +509,67 @@ Tsc2_Rxn$Gaus = LambertW::Gaussianize(Tsc2_Rxn$Rxn)[, 1]
     select(-Comparison, -Comp1, -Comp2)
 
 # Rxn Graphs --------------------------------------------------------------
+  
+  ## Durations on BBN ----
+Rxn_table %>%
+    filter(line == "Tsc2-LE") %>%
+    {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
+    filter(detail %in% c("Alone", "Recheck", "None")) %>%
+    mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
+                             rat_ID < 300 ~ "Group 1",
+                             rat_ID >= 300 & rat_ID < 328~ "Group 2",
+                             rat_ID >= 328 ~ "Group 3",
+                             .default = "Unknown")) %>%
+    filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3")) %>%
+    # filter(Duration %in% c(300, 50)) %>%
+    filter(Frequency == 0) %>%
+    mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
+    filter(! str_detect(Intensity, pattern = "5$")) %>%
+    filter(Intensity < 90 & Intensity > 10) %>%
+    ggplot(aes(x = Intensity, y = Rxn,
+               color = genotype, group = interaction(Duration, genotype))) +
+    ## Overall average lines
+    # stat_summary(aes(x = Intensity, y = Rxn,color = genotype,group = genotype),
+    #              fun = function(x) mean(x, na.rm = TRUE),
+    #              fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+    #              fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+    #              geom = "errorbar", width = 1.5, linetype = "solid", linewidth = 1.5, alpha = 0.5,
+    #              position = position_dodge(4)) +
+    # stat_summary(aes(x = Intensity, y = Rxn,color = genotype,group = genotype),
+    #              fun = function(x) mean(x, na.rm = TRUE),
+    #              geom = "line", linetype = "solid", linewidth = 1.5, alpha = 0.5,
+    #              position = position_dodge(4)) +
+    ## Lines for each group
+    stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+                 fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+                 fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+                 geom = "errorbar", width = 1.5, position = position_dodge(1)) +
+    stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+                 geom = "point", position = position_dodge(1), size = 3) +
+    stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+                 geom = "line", position = position_dodge(1)) +
+    labs(x = "Intensity (dB)",
+         y = "Reaction time (ms, mean +/- SE)",
+         color = "Genotype", linetype = "",
+         caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats")) +
+    scale_linetype_manual(values = c("Group 1" = "solid", 
+                                     "Group 2 Recheck" = "longdash",
+                                     "Group 3" = "dotted")) +
+    scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
+    scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+    facet_wrap(sex ~ Duration) +
+    theme_classic() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+    ) 
+  
+  # ggsave(filename = "Reaction times for BBN by duration and sex for Tsc2.jpg",
+  #        path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Tsc2 LE Experiments",
+  #        plot = last_plot(),
+  #        width = 10, height = 8, units = "in", dpi = 300)
 
-## Durations on BBN ----
+## Durations on BBN by group ----
 Tsc_single_frequency_rxn_graph =   
   Rxn_table %>%
     filter(line == "Tsc2-LE") %>%
@@ -522,12 +626,10 @@ Tsc_single_frequency_rxn_graph =
 
 print(Tsc_single_frequency_rxn_graph)
 
-# ggsave(filename = "Tsc2_Rxn_all_freq.jpg",
-# path = save_folder,
-# plot = last_plot(),
-# width = 5, height = 6, units = "in", dpi = 300)
-
-# TH_annotation = 
+# ggsave(filename = "Reaction times for BBN by group for Tsc2.jpg",
+#        path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Tsc2 LE Experiments",
+#        plot = Tsc_single_frequency_rxn_graph,
+#        width = 10, height = 8, units = "in", dpi = 300)
 
 ## Tones ----
 TH_annotation = 
@@ -586,10 +688,10 @@ Rxn_table %>%
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   ) 
 
-ggsave(filename = "Tsc2_Rxn_tones_MALES.svg",
-       path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Tsc2 + Rapamycin Graphs",
-       plot = last_plot(),
-       width = 10, height = 8, units = "in", dpi = 150)
+# ggsave(filename = "Tsc2_Rxn_tones_MALES.jpg",
+#        path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Tsc2 LE Experiments",
+#        plot = last_plot(),
+#        width = 10, height = 8, units = "in", dpi = 300)
 
 
 ## Sex differences graph ---------------------------------------------------
@@ -636,7 +738,12 @@ Rxn_table %>%
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   ) 
 
-#### Old ----
+# ggsave(filename = "Reaction times for BBN by sex for Tsc2.jpg",
+#        path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Tsc2 LE Experiments",
+#        plot = last_plot(),
+#        width = 10, height = 8, units = "in", dpi = 300)
+
+#### Simple from old ----
 
 Tsc_sex_differences_rxn_graph =   
   Rxn_table %>%
@@ -648,14 +755,14 @@ Tsc_sex_differences_rxn_graph =
                            rat_ID >= 300 ~ "Group 2",
                            .default = "Unknown")) %>%
   filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
-  filter(Duration %in% c(300, 50)) %>%
+  # filter(Duration %in% c(300, 50)) %>%
   filter(Frequency == 0) %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
   filter(! str_detect(Intensity, pattern = "5$")) %>%
   filter(Intensity < 90 & Intensity > 10) %>%
   filter(Frequency == "BBN") %>%
-  ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(sex),
-             color = genotype, group = interaction(sex, genotype))) +
+  ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(Duration), shape = as.factor(Duration),
+             color = genotype, group = interaction(sex, Duration, genotype))) +
   ## Overall average lines
   # stat_summary(aes(x = Intensity, y = Rxn,color = genotype,group = genotype),
   #              fun = function(x) mean(x, na.rm = TRUE),
@@ -678,12 +785,12 @@ Tsc_sex_differences_rxn_graph =
                geom = "line", position = position_dodge(1)) +
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
-       color = "Genotype", linetype = "",
+       color = "Genotype", linetype = "Duration", shape = "Duration",
        caption = if_else(drop_seizure_rats, "Without Female rats with spontanious seizures", "All rats")) +
   # scale_linetype_manual(values = c("Group 1" = "solid", "Group 2" = "longdash")) +
   scale_color_manual(values = c("WT" = "black", "Het" = "deepskyblue", "KO" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
-  facet_wrap(~ Duration) +
+  facet_wrap(sex ~ genotype) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
@@ -691,6 +798,11 @@ Tsc_sex_differences_rxn_graph =
   ) 
 
 print(Tsc_sex_differences_rxn_graph)
+
+# ggsave(filename = "Reaction times for BBN all durations by sex for Tsc2 (temporal integration summary).jpg",
+#        path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Tsc2 LE Experiments",
+#        plot = Tsc_sex_differences_rxn_graph,
+#        width = 10, height = 8, units = "in", dpi = 300)
 
 ### Sex diff: individual females on graph ----
 
@@ -931,12 +1043,13 @@ dprime_table_Tsc2 %>%
                {if (drop_seizure_rats) filter(., !(rat_name %in% rats_with_spontanious_seizures)) else (.)} %>%
                filter(Frequency == 0) %>%
                filter(Duration != 100) %>%
-               filter(detail %in% c("Alone", "Recheck")) %>%
+               filter(detail %in% c("Alone", "Recheck", "None")) %>%
                mutate(group = case_when(detail == "Recheck" ~ "Group 2 Recheck",
                                         rat_ID < 300 ~ "Group 1",
                                         rat_ID >= 300 ~ "Group 2",
+                                        rat_ID >= 328 ~ "Group 3",
                                         .default = "Unknown")) %>%
-               filter(group %in% c("Group 1", "Group 2 Recheck")) %>%
+               filter(group %in% c("Group 1", "Group 2 Recheck", "Group 3")) %>%
                group_by(genotype, Duration, sex) %>%
                summarise(TH = mean(TH, na.rm = TRUE), .groups = "drop"), 
              aes(xintercept = TH, color = genotype, group = genotype), 
@@ -956,7 +1069,7 @@ dprime_table_Tsc2 %>%
   ) 
 
 
-ggsave(filename = "Tsc2_dprime_BBN.svg",
-       path = save_folder,
-       plot = last_plot(),
-       width = 10, height = 8, units = "in", dpi = 150)
+# ggsave(filename = "Tsc2_dprime_BBN.jpg",
+#         path = "C:/Users/Noelle/Box/Behavior Lab/Shared/Noelle/Tsc2 LE Experiments",
+#         plot = last_plot(),
+#         width = 10, height = 8, units = "in", dpi = 300)
