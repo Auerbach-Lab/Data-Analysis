@@ -3,8 +3,6 @@
 ## Load data ---
 source("data.R")
 
-## Process data ---
-# source("data.R")
 
 # Graphing ----------------------------------------------------------------
 n_fun <- function(x){
@@ -108,6 +106,11 @@ TH_table %>%
     panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
 
+# ggsave(filename = "TH (BBN) by genotype.jpg",
+#        path = save_folder,
+#        plot = last_plot(),
+#        width = 8, height = 8, units = "in", dpi = 300)
+
 ## BBN TH by Duration ----
 TH_table %>%
   filter(Frequency == 0) %>%
@@ -130,6 +133,10 @@ TH_table %>%
     panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
 
+# ggsave(filename = "TH (BBN) by duration.jpg",
+#        path = save_folder,
+#        plot = last_plot(),
+#        width = 8, height = 8, units = "in", dpi = 300)
 
 ## Tones TH by Frequency ----
 TH_table %>%
@@ -154,9 +161,14 @@ TH_table %>%
     panel.grid.major.y = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   )
 
+# ggsave(filename = "TH Tones + BBN (50ms).jpg",
+#        path = save_folder,
+#        plot = last_plot(),
+#        width = 10, height = 8, units = "in", dpi = 300)
+
 # Reaction time -----------------------------------------------------------
 
-## BBN ----
+## BBN all ----
 Rxn_table %>%
   filter(Frequency == 0) %>%
   filter(Intensity >= 20) %>%
@@ -176,6 +188,7 @@ Rxn_table %>%
                geom = "line", position = position_dodge(1)) +
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
+       subtitle = "Complete (includes original & recheck)",
        color = "Genotype", linetype = "") +
   scale_color_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
                                 "TSC only" = "deepskyblue", "FXS only" = "red")) +
@@ -187,15 +200,21 @@ Rxn_table %>%
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   ) 
 
-## Temporal Integration ----
+# ggsave(filename = "Rxn all BBN by duration.jpg",
+#        path = save_folder,
+#        plot = last_plot(),
+#        width = 10, height = 8, units = "in", dpi = 300)
+
+## BBN oringinal ----
 Rxn_table_detail %>%
+  filter(detail == "None") %>%
   filter(Frequency == 0) %>%
+  filter(Intensity >= 20) %>%
+  # filter(rat_name != "Blue2") %>%
   mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
-  filter(Intensity >= 40) %>%
   # filter(! str_detect(Intensity, pattern = "5$")) %>%
   ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(Duration),
-             shape = detail,
-             color = genotype, group = interaction(Duration, genotype, detail))) +
+             color = genotype, group = interaction(Duration, genotype))) +
   ## Lines for each group
   stat_summary(fun = function(x) mean(x, na.rm = TRUE),
                fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
@@ -207,17 +226,94 @@ Rxn_table_detail %>%
                geom = "line", position = position_dodge(1)) +
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
+       subtitle = "Original (1st pass) Reaction times only",
        color = "Genotype", linetype = "") +
   scale_color_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
                                 "TSC only" = "deepskyblue", "FXS only" = "red")) +
   scale_x_continuous(breaks = seq(0, 90, by = 10)) +
-  facet_wrap(genotype ~ detail) +
+  facet_wrap(~ Duration) +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   ) 
 
+# ggsave(filename = "Rxn original BBN by duration.jpg",
+#        path = save_folder,
+#        plot = last_plot(),
+#        width = 10, height = 8, units = "in", dpi = 300)
+
+## Temporal Integration ----
+Rxn_table_detail %>%
+  filter(Frequency == 0) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
+  filter(Intensity >= 40) %>%
+  # filter(! str_detect(Intensity, pattern = "5$")) %>%
+  ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(Duration),
+             shape = as.factor(Duration),
+             color = genotype, group = interaction(Duration, genotype, detail))) +
+  ## Lines for each group
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1.5, position = position_dodge(1), alpha = 0.3) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(1), size = 3) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "line", position = position_dodge(1)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "", shape = "") +
+  scale_color_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
+                                "TSC only" = "deepskyblue", "FXS only" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap(genotype ~ detail, ncol = 4) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
+
+# ggsave(filename = "Rxn BBN temportal integration by pass.jpg",
+#        path = save_folder,
+#        plot = last_plot(),
+#        width = 10, height = 10, units = "in", dpi = 300)
+
+## Temporal Integration Overall ----
+Rxn_table_detail %>%
+  filter(Frequency == 0) %>%
+  mutate(Frequency = str_replace_all(Frequency, pattern = "0", replacement = "BBN")) %>%
+  filter(Intensity >= 40) %>%
+  filter(! str_detect(Intensity, pattern = "5$")) %>%
+  ggplot(aes(x = Intensity, y = Rxn, linetype = as.factor(Duration),
+             shape = as.factor(Duration),
+             color = genotype, group = interaction(Duration, genotype))) +
+  ## Lines for each group
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               fun.min = function(x) mean(x, na.rm = TRUE) - se(x),
+               fun.max = function(x) mean(x, na.rm = TRUE) + se(x),
+               geom = "errorbar", width = 1.5, position = position_dodge(1), alpha = 0.3) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE),
+               geom = "point", position = position_dodge(1), size = 3) +
+  stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
+               geom = "line", position = position_dodge(1)) +
+  labs(x = "Intensity (dB)",
+       y = "Reaction time (ms, mean +/- SE)",
+       color = "Genotype", linetype = "", shape = "") +
+  scale_color_manual(values = c("Wild-type" = "black", "Double KO" = "darkmagenta",
+                                "TSC only" = "deepskyblue", "FXS only" = "red")) +
+  scale_x_continuous(breaks = seq(0, 90, by = 10)) +
+  facet_wrap( ~ genotype, ncol = 2) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
+  ) 
+
+# ggsave(filename = "Rxn BBN temportal integration.jpg",
+#        path = save_folder,
+#        plot = last_plot(),
+#        width = 10, height = 10, units = "in", dpi = 300)
 
 ## Tones ----
 Rxn_table %>%
@@ -236,6 +332,8 @@ Rxn_table %>%
                geom = "point", position = position_dodge(0.5), size = 3) +
   stat_summary(fun = function(x) mean(x, na.rm = TRUE), 
                geom = "line", position = position_dodge(0.5)) +
+  # stat_summary(fun.data = n_fun, geom = "text", show.legend = FALSE,
+  #              position = position_dodge(1), vjust = 2, size = 3) +
   labs(x = "Intensity (dB)",
        y = "Reaction time (ms, mean +/- SE)",
        color = "Genotype", linetype = "") +
@@ -248,3 +346,8 @@ Rxn_table %>%
     plot.title = element_text(hjust = 0.5),
     panel.grid.major.x = element_line(color = rgb(235, 235, 235, 255, maxColorValue = 255))
   ) 
+
+ggsave(filename = "Reaction Tones & BBN (50ms).jpg",
+       path = save_folder,
+       plot = last_plot(),
+       width = 10, height = 10, units = "in", dpi = 300)
